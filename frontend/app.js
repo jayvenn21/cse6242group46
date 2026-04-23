@@ -19,10 +19,6 @@
       "../outputs/interpretability/explanations.csv",
       document.baseURI
     ).href,
-    evaluationReport: new URL(
-      "../baselines/outputs/evaluation_report.txt",
-      document.baseURI
-    ).href,
   };
 
   const METRIC_OPTIONS = [
@@ -67,8 +63,8 @@
     sectionSnapshot: d3.select("#section-snapshot"),
     colorG: d3.select("#legend-swatch"),
     tooltip: d3.select("#chart-tooltip"),
-    evalReport: d3.select("#eval-report"),
     dateExports: d3.select("#date-exports"),
+    pipeCaption: d3.select("#pipe-caption"),
   };
 
   const fmt = d3.format(".3f");
@@ -178,9 +174,8 @@
     d3.json(DATA.grid),
     d3.csv(DATA.model, d3.autoType),
     d3.csv(DATA.explain, d3.autoType).catch(() => []),
-    d3.text(DATA.evaluationReport).catch(() => ""),
   ])
-    .then(([geo, modelRows, explainRows, evalText]) => {
+    .then(([geo, modelRows, explainRows]) => {
       for (const r of modelRows) {
         r.date = normDate(r.date);
       }
@@ -202,14 +197,6 @@
         explainRows && explainRows.length
           ? loadExplainIndex(explainRows)
           : null;
-
-      if (evalText && String(evalText).trim() !== "") {
-        el.evalReport.text(String(evalText).trim());
-      } else {
-        el.evalReport.html(
-          "<p class=\"hint\">No <code>baselines/outputs/evaluation_report.txt</code> found. Run the baselines pipeline to generate it.</p>"
-        );
-      }
 
       function explainDatesForGrid(gid) {
         if (!explainRows || !explainRows.length) {
@@ -249,6 +236,13 @@
 
       function renderDateExportFigs() {
         const dStr = currentDateStr();
+        el.pipeCaption.html(
+          "Looking for <code>outputs/maps/risk_heatmap_" +
+            dStr +
+            ".png</code> and <code>actual_vs_pred_" +
+            dStr +
+            ".png</code> — the <strong>same date</strong> as the time control (scrub or play to change this panel)."
+        );
         const heatUrl = new URL(
           "../outputs/maps/risk_heatmap_" + dStr + ".png",
           document.baseURI
@@ -258,7 +252,9 @@
           document.baseURI
         ).href;
         el.dateExports.html(
-          "<p class=\"date-export-wait\" role=\"status\">Checking dated map exports…</p>"
+          "<p class=\"date-export-wait\" role=\"status\">Loading images for " +
+            dStr +
+            "…</p>"
         );
         Promise.all([
           canLoadImage(heatUrl).then((ok) =>
