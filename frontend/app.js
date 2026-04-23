@@ -263,12 +263,13 @@
 
       const map = L.map("leaflet-map", {
         zoomSnap: 0.25,
-        minZoom: 9,
+        minZoom: 10,
         maxZoom: 18,
+        maxBoundsViscosity: 0.75,
       });
 
       L.tileLayer(
-        "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+        "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
         {
           attribution:
             '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
@@ -361,10 +362,10 @@
           : currentColorScale(+row[metric]);
         return {
           fillColor: fill,
-          color: selected ? "#60a5fa" : "#1e293b",
-          weight: selected ? 2.5 : 0.4,
+          color: selected ? "#60a5fa" : "rgba(255, 255, 255, 0.16)",
+          weight: selected ? 2.5 : 0.5,
           opacity: 1,
-          fillOpacity: noData ? 0.35 : 0.82,
+          fillOpacity: noData ? 0.4 : 0.88,
         };
       }
 
@@ -852,7 +853,9 @@
         },
       }).addTo(map);
 
-      map.fitBounds(geoLayer.getBounds(), { padding: [12, 12], maxZoom: 13 });
+      const dataBounds = geoLayer.getBounds();
+      map.setMaxBounds(dataBounds.pad(0.28));
+      map.fitBounds(dataBounds, { padding: [12, 12], maxZoom: 13 });
 
       function renderMap() {
         const dStr = currentDateStr();
@@ -972,7 +975,9 @@
       function invalidateMapSize() {
         map.invalidateSize();
         try {
-          map.fitBounds(geoLayer.getBounds(), { padding: [12, 12], maxZoom: 13 });
+          const dataBounds = geoLayer.getBounds();
+          map.setMaxBounds(dataBounds.pad(0.28));
+          map.fitBounds(dataBounds, { padding: [12, 12], maxZoom: 13 });
         } catch (e) {
           /* ignore */
         }

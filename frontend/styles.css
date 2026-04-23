@@ -185,6 +185,11 @@ main {
   background: #0a0e14;
 }
 
+#leaflet-map .leaflet-tile-pane {
+  /* Subtle pop on CARTO dark; keeps grid colors readable. */
+  filter: saturate(1.06) contrast(1.04);
+}
+
 .status-line {
   position: absolute;
   left: 8px;
