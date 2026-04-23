@@ -45,6 +45,8 @@
     dateNext: d3.select("#date-next"),
     datePlay: d3.select("#date-play-toggle"),
     timeControl: d3.select("#time-control-panel"),
+    timeReadoutWrap: d3.select("#time-readout-wrap"),
+    mapLegend: d3.select("#map-legend"),
     datePlayIcon: d3.select("#date-play-icon"),
     datePlayLabel: d3.select("#date-play-label"),
     metric: d3.select("#metric-select"),
@@ -211,6 +213,7 @@
       let dateIndex = dates.length - 1;
       let selectedGid = null;
       let selectedFeature = null;
+      let playbackId = null;
 
       function currentDateStr() {
         return dates[dateIndex];
@@ -241,8 +244,14 @@
       }
 
       function syncDateUI() {
+        const maxI = Math.max(0, dates.length - 1);
+        const pct = maxI < 1 ? 100 : (dateIndex / maxI) * 100;
+        el.timeReadoutWrap.style(
+          "--time-progress",
+          pct + "%"
+        );
         el.dateSlider
-          .property("max", Math.max(0, dates.length - 1))
+          .property("max", maxI)
           .property("value", dateIndex);
         el.dateReadout.text(
           formatDateLong(currentDateStr()) +
@@ -252,7 +261,7 @@
             dates.length
         );
         el.datePrev.property("disabled", dateIndex <= 0);
-        el.dateNext.property("disabled", dateIndex >= dates.length - 1);
+        el.dateNext.property("disabled", dateIndex >= maxI);
         el.datePlay.property("disabled", dates.length < 2);
         el.dateSlider.attr("aria-valuetext", currentDateStr());
       }
@@ -371,6 +380,7 @@
           weight: selected ? 2.5 : 0.45,
           opacity: 1,
           fillOpacity: noData ? 0.55 : 0.9,
+          className: "map-cell" + (selected ? " map-cell--selected" : "") + (noData ? " map-cell--nodata" : ""),
         };
       }
 
@@ -819,6 +829,12 @@
           );
         }
         invalidateMapSize();
+        if (!playbackId) {
+          el.dateReadout.classed("date-readout--flash", true);
+          window.setTimeout(function () {
+            el.dateReadout.classed("date-readout--flash", false);
+          }, 320);
+        }
       }
 
       const geoLayer = L.geoJSON(geo, {
@@ -989,11 +1005,11 @@
       }
 
       const PLAYBACK_MS = 600;
-      let playbackId = null;
 
       function updatePlayButton() {
         const playing = playbackId != null;
         el.timeControl.classed("is-playing", playing);
+        el.mapLegend.classed("is-playing", playing);
         el.datePlay
           .attr("aria-pressed", playing ? "true" : "false")
           .attr(
