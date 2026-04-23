@@ -43,6 +43,10 @@
     dateReadout: d3.select("#date-readout"),
     datePrev: d3.select("#date-prev"),
     dateNext: d3.select("#date-next"),
+    datePlay: d3.select("#date-play-toggle"),
+    timeControl: d3.select("#time-control-panel"),
+    datePlayIcon: d3.select("#date-play-icon"),
+    datePlayLabel: d3.select("#date-play-label"),
     metric: d3.select("#metric-select"),
     asideTitle: d3.select("#panel-title"),
     cellHint: d3.select("#cell-hint"),
@@ -249,6 +253,7 @@
         );
         el.datePrev.property("disabled", dateIndex <= 0);
         el.dateNext.property("disabled", dateIndex >= dates.length - 1);
+        el.datePlay.property("disabled", dates.length < 2);
         el.dateSlider.attr("aria-valuetext", currentDateStr());
       }
 
@@ -983,14 +988,71 @@
         }
       }
 
+      const PLAYBACK_MS = 600;
+      let playbackId = null;
+
+      function updatePlayButton() {
+        const playing = playbackId != null;
+        el.timeControl.classed("is-playing", playing);
+        el.datePlay
+          .attr("aria-pressed", playing ? "true" : "false")
+          .attr(
+            "aria-label",
+            playing ? "Pause date animation" : "Play through all dates from first to last"
+          )
+          .attr(
+            "title",
+            playing
+              ? "Stop animation (map stays on this date)"
+              : "From first date, step through to the last (~0.6s per day)"
+          );
+        el.datePlayIcon.text(playing ? "⏸" : "▶");
+        el.datePlayLabel.text(playing ? "Pause" : "Play");
+      }
+
+      function stopPlayback() {
+        if (playbackId != null) {
+          clearInterval(playbackId);
+          playbackId = null;
+        }
+        updatePlayButton();
+      }
+
+      function startPlayback() {
+        stopPlayback();
+        if (dates.length < 2) {
+          return;
+        }
+        dateIndex = 0;
+        syncDateUI();
+        onDateChanged();
+        if (dateIndex >= dates.length - 1) {
+          updatePlayButton();
+          return;
+        }
+        playbackId = setInterval(function playbackTick() {
+          if (dateIndex >= dates.length - 1) {
+            stopPlayback();
+            return;
+          }
+          dateIndex += 1;
+          syncDateUI();
+          onDateChanged();
+        }, PLAYBACK_MS);
+        updatePlayButton();
+      }
+
       syncDateUI();
+      updatePlayButton();
 
       el.dateSlider.on("input", () => {
+        stopPlayback();
         dateIndex = Number(el.dateSlider.property("value"));
         syncDateUI();
         onDateChanged();
       });
       el.datePrev.on("click", () => {
+        stopPlayback();
         if (dateIndex > 0) {
           dateIndex -= 1;
           syncDateUI();
@@ -998,13 +1060,25 @@
         }
       });
       el.dateNext.on("click", () => {
+        stopPlayback();
         if (dateIndex < dates.length - 1) {
           dateIndex += 1;
           syncDateUI();
           onDateChanged();
         }
       });
+      el.datePlay.on("click", () => {
+        if (dates.length < 2) {
+          return;
+        }
+        if (playbackId != null) {
+          stopPlayback();
+        } else {
+          startPlayback();
+        }
+      });
       el.metric.on("change", () => {
+        stopPlayback();
         renderMap();
         renderDistributionChart();
         if (selectedFeature) {

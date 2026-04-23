@@ -25,7 +25,12 @@
         <h1>Explaining &amp; forecasting local fire incidents (Atlanta grid)</h1>
         <span class="meta">CSE 6242 · Team 46</span>
         <div class="controls">
-          <div class="time-control" role="group" aria-labelledby="time-label">
+          <div
+            class="time-control"
+            id="time-control-panel"
+            role="group"
+            aria-labelledby="time-label"
+          >
             <span id="time-label" class="time-label">Time</span>
             <div class="time-row">
               <button type="button" id="date-prev" class="btn-step" aria-label="Previous day">
@@ -46,6 +51,20 @@
               <button type="button" id="date-next" class="btn-step" aria-label="Next day">
                 →
               </button>
+              <div class="time-playback" role="group" aria-label="Date animation">
+                <button
+                  type="button"
+                  id="date-play-toggle"
+                  class="btn-play"
+                  aria-pressed="false"
+                  title="From first date, step through to the last (~0.6s per day)"
+                >
+                  <span id="date-play-icon" class="btn-play-icon" aria-hidden="true"
+                    >▶</span
+                  >
+                  <span id="date-play-label" class="btn-play-label">Play</span>
+                </button>
+              </div>
             </div>
           </div>
           <label>

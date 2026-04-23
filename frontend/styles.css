@@ -75,8 +75,16 @@ header .meta {
 
 .time-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.5rem 0.45rem;
+}
+
+.time-playback {
+  flex-shrink: 0;
+  margin-left: 0.1rem;
+  padding-left: 0.45rem;
+  border-left: 1px solid var(--border);
 }
 
 .time-readout-wrap {
@@ -118,6 +126,48 @@ header .meta {
 .btn-step:disabled {
   opacity: 0.35;
   cursor: not-allowed;
+}
+
+.btn-play {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  min-width: 4.5rem;
+  height: 2rem;
+  padding: 0 0.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.btn-play:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn-play:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.btn-play-icon {
+  font-size: 0.7rem;
+  line-height: 1;
+  width: 0.75rem;
+  text-align: center;
+}
+
+#time-control-panel.is-playing .btn-play {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(59, 130, 246, 0.12);
 }
 
 #date-slider {
