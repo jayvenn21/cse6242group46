@@ -1,0 +1,53 @@
+=================================================================
+  BASELINE MODELS — EVALUATION REPORT
+=================================================================
+
+Test set size: 26,572 cell-month observations
+Positive class (target_next_interval=1): 138 (0.5%)
+Negative class (target_next_interval=0): 26,434 (99.5%)
+
+─────────────────────────────────────────────────────────────────
+  METRICS SUMMARY
+─────────────────────────────────────────────────────────────────
+
+                    Accuracy  Precision  Recall  F1-Score  ROC-AUC  PR-AUC
+Model                                                                     
+Historical Hotspot    0.9818     0.0274  0.0725    0.0398   0.5295  0.0086
+ARIMA                 0.9920     0.0375  0.0217    0.0275   0.5910  0.0110
+Random Forest         0.9947     0.0000  0.0000    0.0000   0.6508  0.0144
+
+─────────────────────────────────────────────────────────────────
+  CLASSIFICATION REPORTS
+─────────────────────────────────────────────────────────────────
+
+>> Historical Hotspot:
+              precision    recall  f1-score   support
+
+     No Fire       1.00      0.99      0.99     26434
+        Fire       0.03      0.07      0.04       138
+
+    accuracy                           0.98     26572
+   macro avg       0.51      0.53      0.52     26572
+weighted avg       0.99      0.98      0.99     26572
+
+
+>> ARIMA:
+              precision    recall  f1-score   support
+
+     No Fire       0.99      1.00      1.00     26434
+        Fire       0.04      0.02      0.03       138
+
+    accuracy                           0.99     26572
+   macro avg       0.52      0.51      0.51     26572
+weighted avg       0.99      0.99      0.99     26572
+
+
+>> Random Forest:
+              precision    recall  f1-score   support
+
+     No Fire       0.99      1.00      1.00     26434
+        Fire       0.00      0.00      0.00       138
+
+    accuracy                           0.99     26572
+   macro avg       0.50      0.50      0.50     26572
+weighted avg       0.99      0.99      0.99     26572

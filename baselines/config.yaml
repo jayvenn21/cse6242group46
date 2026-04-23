@@ -1,0 +1,23 @@
+paths:
+  incidents_clean: "../data/processed/incidents_clean.parquet"
+  grid_cells: "../data/processed/grid_cells.geojson"
+  model_table: "../data/processed/model_table.parquet"
+  output_dir: "outputs"
+  plot_dir: "outputs/plots"
+
+temporal:
+  train_fraction: 0.8  
+
+random_seed: 42
+
+random_forest:
+  n_estimators: 300
+  max_depth: 15
+  min_samples_leaf: 10
+
+arima:
+  min_nonzero_days: 5       
+  max_cells: 50             
+  order_p: [0, 1, 2]
+  order_d: [0, 1]
+  order_q: [0, 1, 2]
