@@ -88,28 +88,66 @@ def save_shap_outputs(model, X_test, output_dir):
 
     os.makedirs(output_dir, exist_ok=True)
 
-    sample_n = min(1000, len(X_test))
+    sample_n = min(500, len(X_test))
     X_sample = X_test.sample(sample_n, random_state=42)
 
     explainer = shap.TreeExplainer(model)
-    shap_values = explainer.shap_values(X_sample)
 
-    if isinstance(shap_values, list):
-        shap_plot_values = shap_values[1]
-    else:
-        shap_plot_values = shap_values
+    shap_explanation = explainer(X_sample)
+    shap_values = shap_explanation.values
+
+    if shap_values.ndim == 3:
+        shap_values = shap_values[:, :, 1]
 
     plt.figure()
-    shap.summary_plot(shap_plot_values, X_sample, show=False)
-    plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, "shap_summary.png"), dpi=150, bbox_inches="tight")
+    shap.summary_plot(
+        shap_values,
+        X_sample,
+        show=False,
+        plot_type="dot"
+    )
+    plt.savefig(
+        os.path.join(output_dir, "shap_summary.png"),
+        dpi=150,
+        bbox_inches="tight"
+    )
     plt.close()
 
     plt.figure()
-    shap.summary_plot(shap_plot_values, X_sample, plot_type="bar", show=False)
-    plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, "shap_bar.png"), dpi=150, bbox_inches="tight")
+    shap.summary_plot(
+        shap_values,
+        X_sample,
+        show=False,
+        plot_type="bar"
+    )
+    plt.savefig(
+        os.path.join(output_dir, "shap_bar.png"),
+        dpi=150,
+        bbox_inches="tight"
+    )
     plt.close()
+
+    base_values = shap_explanation.base_values
+    if np.array(base_values).ndim == 2:
+        base_values = np.array(base_values)[:, 1]
+
+    for i in range(min(3, len(X_sample))):
+        plt.figure()
+        shap.plots.waterfall(
+            shap.Explanation(
+                values=shap_values[i],
+                base_values=base_values[i],
+                data=X_sample.iloc[i].values,
+                feature_names=X_sample.columns.tolist(),
+            ),
+            show=False
+        )
+        plt.savefig(
+            os.path.join(output_dir, f"local_explanation_{i+1}.png"),
+            dpi=150,
+            bbox_inches="tight"
+        )
+        plt.close()
 
 
 def main():

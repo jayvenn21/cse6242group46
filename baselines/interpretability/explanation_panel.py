@@ -3,6 +3,11 @@ import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 
+try:
+    import shap
+except ImportError:
+    shap = None
+
 FEATURE_COLS = [
     "temperature", "humidity", "precipitation", "wind",
     "day_of_week", "month", "is_weekend", "is_holiday",
@@ -56,24 +61,35 @@ def train_rf(train_df):
     return model, grid_map, list(X_train.columns)
 
 
-def build_rule_based_explanation(row):
-    reasons = []
+def clean_feature_name(name):
+    rename_map = {
+        "grid_id_enc": "location history",
+        "rolling_sum_14": "recent 14-period activity",
+        "rolling_sum_7": "recent 7-period activity",
+        "lag_1": "last-period incidents",
+        "lag_3": "3-period lag activity",
+        "lag_7": "7-period lag activity",
+        "day_of_week": "day of week",
+        "is_weekend": "weekend timing",
+        "is_holiday": "holiday timing",
+    }
+    return rename_map.get(name, name.replace("_", " "))
 
-    if row.get("temperature", 0) > 75:
-        reasons.append("higher temperature")
-    if row.get("humidity", 100) < 40:
-        reasons.append("lower humidity")
-    if row.get("wind", 0) > 12:
-        reasons.append("stronger wind")
-    if row.get("rolling_sum_7", 0) > 0:
-        reasons.append("recent fire activity in the last 7 periods")
-    if row.get("rolling_sum_14", 0) > row.get("rolling_sum_7", 0):
-        reasons.append("elevated recent activity over the last 14 periods")
 
-    if not reasons:
-        return "Risk appears lower because recent activity and weather indicators are not elevated."
+def build_shap_explanation(row):
+    drivers = []
+    for i in range(1, 4):
+        feat = row[f"top_driver_{i}"]
+        val = row[f"top_driver_{i}_shap"]
+        direction = "increases" if val > 0 else "decreases"
+        drivers.append(f"{clean_feature_name(feat)} ({direction} risk)")
 
-    return "Risk is elevated mainly because of " + ", ".join(reasons[:3]) + "."
+    if row["rf_prob"] >= 0.5:
+        prefix = "Risk is elevated mainly because "
+    else:
+        prefix = "Risk remains lower mainly because "
+
+    return prefix + ", ".join(drivers[:-1]) + f", and {drivers[-1]}."
 
 
 def main():
@@ -81,6 +97,9 @@ def main():
     data_path = os.path.join(base_dir, "data", "processed", "model_table.parquet")
     output_dir = os.path.join(base_dir, "outputs", "interpretability")
     os.makedirs(output_dir, exist_ok=True)
+
+    if shap is None:
+        raise ImportError("shap must be installed to build SHAP-based explanations.")
 
     df = pd.read_parquet(data_path)
     train_df, test_df = temporal_split(df)
@@ -91,12 +110,70 @@ def main():
     probs = model.predict_proba(X_test)[:, 1]
     preds = (probs >= 0.5).astype(int)
 
-    export_df = test_df[["grid_id", "date"] + FEATURE_COLS].copy()
-    export_df["rf_prob"] = probs
-    export_df["rf_pred"] = preds
-    export_df["explanation_text"] = export_df.apply(build_rule_based_explanation, axis=1)
+    full_df = test_df[["grid_id", "date"] + FEATURE_COLS].copy()
+    full_df["grid_id_enc"] = X_test["grid_id_enc"].values
+    full_df["rf_prob"] = probs
+    full_df["rf_pred"] = preds
 
-    export_df.to_csv(os.path.join(output_dir, "explanations.csv"), index=False)
+    high_idx = full_df.nlargest(50, "rf_prob").index
+
+    medium_candidates = full_df[
+        (full_df["rf_prob"] >= full_df["rf_prob"].quantile(0.40)) &
+        (full_df["rf_prob"] <= full_df["rf_prob"].quantile(0.60))
+    ]
+    if len(medium_candidates) > 0:
+        medium_idx = medium_candidates.sample(
+            n=min(25, len(medium_candidates)),
+            random_state=42
+        ).index.tolist()
+    else:
+        medium_idx = []
+
+    low_candidates = full_df.nsmallest(200, "rf_prob")
+    if len(low_candidates) > 0:
+        low_idx = low_candidates.sample(
+            n=min(25, len(low_candidates)),
+            random_state=42
+        ).index.tolist()
+    else:
+        low_idx = []
+
+    explain_idx = list(dict.fromkeys(list(high_idx) + medium_idx + low_idx))
+    explain_df = full_df.loc[explain_idx].copy()
+    X_explain = X_test.loc[explain_idx].copy()
+
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X_explain)
+
+    if isinstance(shap_values, list):
+        shap_matrix = shap_values[1]
+    elif len(np.array(shap_values).shape) == 3:
+        shap_matrix = np.array(shap_values)[:, :, 1]
+    else:
+        shap_matrix = shap_values
+
+    shap_df = pd.DataFrame(shap_matrix, columns=X_explain.columns, index=explain_df.index)
+
+    for col in shap_df.columns:
+        explain_df[f"{col}_shap"] = shap_df[col]
+
+    abs_shap = shap_df.abs()
+    top_idx = np.argsort(-abs_shap.values, axis=1)[:, :3]
+    cols = shap_df.columns.tolist()
+
+    explain_df["top_driver_1"] = [cols[idxs[0]] for idxs in top_idx]
+    explain_df["top_driver_2"] = [cols[idxs[1]] for idxs in top_idx]
+    explain_df["top_driver_3"] = [cols[idxs[2]] for idxs in top_idx]
+
+    explain_df["top_driver_1_shap"] = [shap_df.iloc[i, idxs[0]] for i, idxs in enumerate(top_idx)]
+    explain_df["top_driver_2_shap"] = [shap_df.iloc[i, idxs[1]] for i, idxs in enumerate(top_idx)]
+    explain_df["top_driver_3_shap"] = [shap_df.iloc[i, idxs[2]] for i, idxs in enumerate(top_idx)]
+
+    explain_df["explanation_text"] = explain_df.apply(build_shap_explanation, axis=1)
+
+    explain_df.to_csv(os.path.join(output_dir, "explanations.csv"), index=False)
+    full_df.to_csv(os.path.join(output_dir, "scored_test_rows.csv"), index=False)
+
     print(f"Saved explanations to {output_dir}")
 
 
