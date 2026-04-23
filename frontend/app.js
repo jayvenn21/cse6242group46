@@ -63,8 +63,6 @@
     sectionSnapshot: d3.select("#section-snapshot"),
     colorG: d3.select("#legend-swatch"),
     tooltip: d3.select("#chart-tooltip"),
-    dateExports: d3.select("#date-exports"),
-    pipeCaption: d3.select("#pipe-caption"),
   };
 
   const fmt = d3.format(".3f");
@@ -219,91 +217,6 @@
 
       function currentDateStr() {
         return dates[dateIndex];
-      }
-
-      function canLoadImage(url) {
-        return new Promise((resolve) => {
-          const im = new Image();
-          im.onload = function () {
-            resolve(true);
-          };
-          im.onerror = function () {
-            resolve(false);
-          };
-          im.src = url;
-        });
-      }
-
-      function renderDateExportFigs() {
-        const dStr = currentDateStr();
-        el.pipeCaption.html(
-          "Looking for <code>outputs/maps/risk_heatmap_" +
-            dStr +
-            ".png</code> and <code>actual_vs_pred_" +
-            dStr +
-            ".png</code> — the <strong>same date</strong> as the time control (scrub or play to change this panel)."
-        );
-        const heatUrl = new URL(
-          "../outputs/maps/risk_heatmap_" + dStr + ".png",
-          document.baseURI
-        ).href;
-        const apUrl = new URL(
-          "../outputs/maps/actual_vs_pred_" + dStr + ".png",
-          document.baseURI
-        ).href;
-        el.dateExports.html(
-          "<p class=\"date-export-wait\" role=\"status\">Loading images for " +
-            dStr +
-            "…</p>"
-        );
-        Promise.all([
-          canLoadImage(heatUrl).then((ok) =>
-            ok
-              ? {
-                  url: heatUrl,
-                  cap: "Risk heatmap (saved PNG)",
-                }
-              : null
-          ),
-          canLoadImage(apUrl).then((ok) =>
-            ok
-              ? {
-                  url: apUrl,
-                  cap: "Actual vs predicted (saved PNG)",
-                }
-              : null
-          ),
-        ]).then((parts) => {
-          const ok = parts.filter(Boolean);
-          el.dateExports.html("");
-          if (!ok.length) {
-            el.dateExports
-              .append("p")
-              .attr("class", "hint")
-              .text(
-                "No pipeline PNGs for " +
-                  dStr +
-                  " in outputs/maps/ (optional files: " +
-                  "risk_heatmap_YYYY-MM-DD.png, actual_vs_pred_YYYY-MM-DD.png)."
-              );
-            return;
-          }
-          const g = el.dateExports
-            .append("div")
-            .attr("class", "date-export-figs");
-          ok.forEach((p) => {
-            const fig = g.append("figure").attr("class", "output-fig");
-            fig
-              .append("img")
-              .attr("src", p.url)
-              .attr("alt", p.cap)
-              .attr("loading", "lazy");
-            fig
-              .append("figcaption")
-              .attr("class", "output-fig-cap")
-              .text(p.cap);
-          });
-        });
       }
 
       function dateIndexForISO(iso) {
@@ -991,7 +904,6 @@
             el.dateReadout.classed("date-readout--flash", false);
           }, 320);
         }
-        renderDateExportFigs();
       }
 
       const geoLayer = L.geoJSON(geo, {
@@ -1274,7 +1186,6 @@
       );
       renderMap();
       renderDistributionChart();
-      renderDateExportFigs();
     })
     .catch((e) => {
       console.error(e);

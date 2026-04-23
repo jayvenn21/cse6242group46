@@ -696,57 +696,6 @@ aside h2,
   color: var(--accent);
 }
 
-/* Per-date pipeline PNGs (time control); filled by app.js */
-.date-exports-panel {
-  min-height: 4.5rem;
-}
-
-.date-export-wait {
-  margin: 0;
-  font-size: 0.72rem;
-  color: var(--muted);
-}
-
-.date-export-figs {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.45rem;
-  align-items: start;
-}
-
-.output-fig {
-  margin: 0;
-  padding: 0;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg);
-  overflow: hidden;
-}
-
-.output-fig img {
-  display: block;
-  width: 100%;
-  height: auto;
-  max-width: 100%;
-  vertical-align: top;
-}
-
-.output-fig-cap {
-  display: block;
-  padding: 0.25rem 0.4rem 0.35rem;
-  font-size: 0.62rem;
-  color: var(--muted);
-  line-height: 1.2;
-  border-top: 1px solid var(--border);
-  background: rgba(0, 0, 0, 0.2);
-}
-
-@media (max-width: 420px) {
-  .date-export-figs {
-    grid-template-columns: 1fr;
-  }
-}
-
 #leaflet-map .leaflet-control-zoom a {
   color: #1e293b;
   background: rgba(255, 255, 255, 0.92);
