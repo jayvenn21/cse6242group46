@@ -479,7 +479,7 @@ aside h2,
 }
 
 #shap-chart {
-  min-height: 5rem;
+  min-height: 6.5rem;
 }
 
 #dist-chart > .d3-svg {
@@ -516,7 +516,7 @@ aside h2,
   background: var(--bg);
   border: 1px solid var(--border);
   vertical-align: top;
-  /* viewBox in JS sets H; do not lock aspect-ratio */
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
 }
 
 .d3-interactive {
@@ -558,21 +558,58 @@ aside h2,
   shape-rendering: crispEdges;
 }
 
-.shap-zero {
-  stroke: #64748b;
-  stroke-width: 1;
-  stroke-dasharray: 3 2;
+.shap-plot-bg {
+  fill: rgba(0, 0, 0, 0.2);
+  stroke: var(--border);
+  stroke-width: 0.5;
 }
 
-.shap-feat {
-  font-size: 0.65rem;
+.d3-shap .shap-zero {
+  stroke: #94a3b8;
+  stroke-width: 1.2;
+  stroke-dasharray: 3 2;
+  shape-rendering: crispEdges;
+}
+
+.d3-shap .shap-feat {
+  font-size: 0.7rem;
+  font-weight: 500;
   fill: var(--text);
+  pointer-events: none;
+  letter-spacing: -0.01em;
+}
+
+.d3-shap .shap-value {
+  font-size: 0.6rem;
+  font-variant-numeric: tabular-nums;
+  fill: #94a3b8;
   pointer-events: none;
 }
 
-.shap-rect {
-  transition: opacity 0.1s ease;
+.d3-shap .shap-axis-title {
+  fill: var(--muted);
+  font-size: 0.6rem;
 }
+
+.d3-shap .shap-axis-domain {
+  stroke: var(--border);
+}
+
+.d3-shap g.axis--shap-x text {
+  font-size: 0.58rem;
+  fill: var(--muted);
+}
+
+.d3-shap g.axis--shap-x .tick line {
+  stroke: var(--border);
+  opacity: 0.6;
+}
+
+.shap-rect {
+  transition: opacity 0.12s ease, filter 0.12s ease;
+  vector-effect: non-scaling-stroke;
+}
+
 
 .chart-tooltip {
   position: fixed;

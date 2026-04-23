@@ -799,18 +799,18 @@
             .text("No top-driver SHAP columns in this row.");
           return;
         }
-        const M = { top: 8, right: 6, bottom: 30, left: 120 };
-        const W = 300;
+        const M = { top: 10, right: 12, bottom: 40, left: 136 };
+        const W = 320;
         const N = top.length;
-        const rowH = 28;
-        const H = M.top + N * rowH + M.bottom;
-        const w = W - M.left - M.right;
+        const rowH = 32;
         const h = N * rowH;
+        const H = M.top + h + M.bottom;
+        const w = W - M.left - M.right;
         const y = d3
           .scaleBand()
           .domain(top.map((d) => d.name))
           .range([0, h])
-          .padding(0.2);
+          .padding(0.18);
         const valsN = top.map((d) => d.val);
         const lo0 = d3.min(valsN);
         const hi0 = d3.max(valsN);
@@ -826,72 +826,141 @@
           .nice();
 
         el.shap.html("");
+        const fmtShap = d3.format(".3f");
         const svg = el.shap
           .append("svg")
           .attr("class", "d3-svg d3-shap")
           .attr("viewBox", "0 0 " + W + " " + H)
-          .attr("width", "100%");
+          .attr("width", "100%")
+          .attr("role", "img")
+          .attr(
+            "aria-label",
+            "SHAP values: " +
+              top
+                .map((d) => d.name + " " + fmtShap(d.val))
+                .join(", ")
+          );
         const g = svg
           .append("g")
-          .attr("transform", `translate(${M.left},${M.top})`);
+          .attr("transform", "translate(" + M.left + "," + M.top + ")");
+
+        g.append("rect")
+          .attr("x", 0)
+          .attr("y", 0)
+          .attr("width", w)
+          .attr("height", h)
+          .attr("class", "shap-plot-bg")
+          .attr("rx", 4);
+
         g.append("line")
           .attr("class", "shap-zero")
           .attr("x1", x(0))
           .attr("x2", x(0))
           .attr("y1", 0)
-          .attr("y2", h);
-        g.append("g")
-          .attr("class", "axis")
-          .attr("transform", `translate(0,${h})`)
+          .attr("y2", h)
+          .attr("pointer-events", "none");
+
+        const xAxisG = g
+          .append("g")
+          .attr("class", "axis axis--shap-x")
+          .attr("transform", "translate(0," + h + ")");
+        xAxisG
           .call(
             d3
               .axisBottom(x)
-              .ticks(4)
+              .ticks(5)
               .tickSizeOuter(0)
-          )
+              .tickSizeInner(4)
+              .tickFormat((v) => d3.format(".2f")(v))
+          );
+        xAxisG.select("path").attr("class", "shap-axis-domain");
+        xAxisG
           .append("text")
+          .attr("class", "shap-axis-title")
           .attr("x", w / 2)
-          .attr("y", 24)
-          .attr("class", "axis-title")
+          .attr("y", 32)
+          .attr("text-anchor", "middle")
           .text("SHAP (impact on log-odds)");
 
-        g.selectAll("g.barw")
+        const labelPad = 10;
+        const rowG = g
+          .selectAll("g.shap-rowg")
           .data(top)
           .join("g")
-          .attr("class", "barw")
-          .attr("transform", (d) => `translate(0,${y(d.name)})`)
-          .each(function (d) {
-            const g0 = d3.select(this);
-            const x0 = d.val < 0 ? x(d.val) : x(0);
-            const w0 = Math.max(1, Math.abs(x(d.val) - x(0)));
+          .attr("class", "shap-rowg")
+          .style("cursor", "pointer")
+          .attr("transform", (d) => "translate(0," + y(d.name) + ")");
+
+        rowG.each(function (d) {
+          const g0 = d3.select(this);
+          const bw = y.bandwidth();
+          const yc = bw / 2;
+          const lab =
+            d.name.length > 26
+              ? d.name.slice(0, 24) + "…"
+              : d.name;
+          g0
+            .append("text")
+            .attr("class", "shap-feat")
+            .attr("x", -labelPad)
+            .attr("y", yc)
+            .attr("dy", "0.35em")
+            .attr("text-anchor", "end")
+            .text(lab);
+          g0
+            .append("title")
+            .text(
+              d.name
+            );
+          const x0 = d.val < 0 ? x(d.val) : x(0);
+          const w0 = Math.max(1, Math.abs(x(d.val) - x(0)));
+          const isNeg = d.val < 0;
+          g0
+            .append("rect")
+            .attr("class", "shap-rect")
+            .attr("x", x0)
+            .attr("y", 0)
+            .attr("width", 0)
+            .attr("height", bw)
+            .attr("ry", 2)
+            .attr("rx", 2)
+            .attr("fill", isNeg ? "#b4533d" : "#3b7dd6")
+            .transition()
+            .duration(380)
+            .ease(d3.easeCubicOut)
+            .attr("width", w0);
+          if (w0 > 18) {
             g0
               .append("text")
-              .attr("class", "shap-feat")
-              .attr("x", -6)
-              .attr("y", y.bandwidth() / 2)
+              .attr("class", "shap-value")
+              .attr("y", yc)
               .attr("dy", "0.35em")
-              .attr("text-anchor", "end")
-              .text(
-                d.name.length > 22
-                  ? d.name.slice(0, 20) + "…"
-                  : d.name
-              );
-            g0
-              .append("rect")
-              .attr("class", "shap-rect")
-              .attr("x", x0)
-              .attr("y", 0)
-              .attr("width", w0)
-              .attr("height", y.bandwidth())
-              .attr("fill", d.val < 0 ? "#a8554c" : "#3b6ea8");
-          })
+              .attr("opacity", 0)
+              .attr(
+                "x",
+                d.val >= 0 ? x(d.val) + 4 : x(d.val) - 4
+              )
+              .attr("text-anchor", d.val >= 0 ? "start" : "end")
+              .text(fmtShap(d.val))
+              .transition()
+              .duration(300)
+              .delay(200)
+              .attr("opacity", 1);
+          }
+        });
+
+        rowG
           .on("mouseenter", function (ev, d) {
             moveTooltip(
               ev.clientX,
               ev.clientY,
-              "<div class=\"tt-header\">" + d.name + "</div>SHAP: <strong>" + fmt2(d.val) + "</strong>"
+              "<div class=\"tt-header\">" +
+                d.name +
+                "</div>SHAP (log-odds): <strong>" +
+                fmt2(d.val) +
+                "</strong><br/>Positive → higher fire log-odds; negative → lower."
             );
-            d3.select(this).select("rect").attr("opacity", 0.85);
+            d3.select(this).select("rect").attr("opacity", 0.8);
           })
           .on("mouseleave", function () {
             d3.select(this).select("rect").attr("opacity", 1);
