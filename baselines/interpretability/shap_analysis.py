@@ -113,7 +113,7 @@ def save_shap_outputs(model, X_test, output_dir):
 
 
 def main():
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     data_path = os.path.join(base_dir, "data", "processed", "model_table.parquet")
     output_dir = os.path.join(base_dir, "outputs", "interpretability")
 

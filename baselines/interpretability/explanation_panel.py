@@ -77,7 +77,7 @@ def build_rule_based_explanation(row):
 
 
 def main():
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     data_path = os.path.join(base_dir, "data", "processed", "model_table.parquet")
     output_dir = os.path.join(base_dir, "outputs", "interpretability")
     os.makedirs(output_dir, exist_ok=True)
