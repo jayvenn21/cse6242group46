@@ -235,21 +235,50 @@ main {
   margin-top: 0.25rem;
 }
 
-aside {
+aside.detail-aside {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  padding: 0.75rem 1rem;
+  gap: 0;
+  padding: 0.75rem 0.9rem 1.25rem;
   background: var(--panel);
   border-left: 1px solid var(--border);
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   min-height: 0;
+  -webkit-overflow-scrolling: touch;
 }
 
-aside h2 {
+.side-block {
+  position: relative;
+  z-index: 0;
+  display: block;
+  width: 100%;
   margin: 0;
-  font-size: 0.85rem;
+  padding: 0.75rem 0 1.1rem;
+  border-bottom: 1px solid var(--border);
+  flex: 0 0 auto;
+  clear: both;
+}
+
+.side-block:last-of-type {
+  border-bottom: 0;
+}
+
+.side-block:first-child {
+  padding-top: 0.25rem;
+}
+
+.side-block[hidden] {
+  display: none !important;
+}
+
+aside h2,
+.detail-aside h2 {
+  margin: 0 0 0.45rem;
+  font-size: 0.88rem;
   font-weight: 600;
+  line-height: 1.25;
+  clear: both;
 }
 
 .hint {
@@ -287,21 +316,163 @@ aside h2 {
   border-radius: 6px;
 }
 
-#shap-chart {
-  min-height: 100px;
+.subhead {
+  font-size: 0.72rem;
+  color: var(--muted);
+  line-height: 1.45;
+  margin: 0 0 0.5rem;
 }
 
-#shap-chart .bar-label {
+.d3-panel {
+  position: relative;
+  z-index: 0;
+  display: block;
+  width: 100%;
+  min-height: 0;
+  margin: 0 0 0.15rem;
+}
+
+#dist-chart {
+  min-height: 9.4rem; /* ≈ 150/320 of typical column width, fallback if aspect-ratio fails */
+}
+
+#shap-chart {
+  min-height: 5rem;
+}
+
+#dist-chart > .d3-svg {
+  display: block;
+  width: 100% !important;
+  height: auto !important;
+  max-width: 100%;
+  border-radius: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  aspect-ratio: 320 / 158;
+  vertical-align: top;
+}
+
+#ts-chart > .d3-svg {
+  display: block;
+  width: 100% !important;
+  height: auto !important;
+  max-width: 100%;
+  border-radius: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  aspect-ratio: 400 / 196;
+  vertical-align: top;
+}
+
+#shap-chart > .d3-svg {
+  display: block;
+  width: 100% !important;
+  max-width: 100%;
+  min-height: 3.5rem;
+  height: auto;
+  border-radius: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  vertical-align: top;
+  /* viewBox in JS sets H; do not lock aspect-ratio */
+}
+
+.d3-interactive {
+  cursor: crosshair;
+}
+
+.d3-svg .axis {
+  color: var(--muted);
   font-size: 0.65rem;
+}
+
+.d3-svg .axis .domain,
+.d3-svg .axis .tick line {
+  stroke: var(--border);
+}
+
+.d3-svg .axis-title {
+  fill: var(--muted);
+  font-size: 0.6rem;
+}
+
+.ts-line {
+  vector-effect: non-scaling-stroke;
+}
+
+.ts-focus {
+  stroke: #f472b6;
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+  opacity: 0.95;
+}
+
+.ts-legend-text {
+  font-size: 0.6rem;
   fill: var(--muted);
 }
 
-#shap-chart .bar {
-  fill: #4f8ad4;
+.hist-bar {
+  shape-rendering: crispEdges;
 }
 
-#shap-chart .bar.neg {
-  fill: #c94c4c;
+.shap-zero {
+  stroke: #64748b;
+  stroke-width: 1;
+  stroke-dasharray: 3 2;
+}
+
+.shap-feat {
+  font-size: 0.65rem;
+  fill: var(--text);
+  pointer-events: none;
+}
+
+.shap-rect {
+  transition: opacity 0.1s ease;
+}
+
+.chart-tooltip {
+  position: fixed;
+  z-index: 2000;
+  max-width: 240px;
+  padding: 0.45rem 0.55rem;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: var(--text);
+  background: rgba(15, 20, 25, 0.95);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.08s ease;
+}
+
+.chart-tooltip.visible {
+  opacity: 1;
+}
+
+.chart-tooltip .tt-header {
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  color: #93c5fd;
+}
+
+.chart-tooltip .tt-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.68rem;
+}
+
+.chart-tooltip .tt-table td {
+  padding: 0.1rem 0.25rem 0.1rem 0;
+  vertical-align: top;
+}
+
+.chart-tooltip .tt-table td:last-child {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .error-banner {
@@ -316,11 +487,30 @@ aside h2 {
   display: block;
 }
 
+.data-snapshot {
+  width: 100%;
+  margin: 0.25rem 0 0;
+  padding: 0.5rem 0.55rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow-x: auto;
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.data-snapshot .dl-table {
+  font-size: 0.7rem;
+}
+
 .link-note {
   font-size: 0.7rem;
   color: var(--muted);
-  margin-top: auto;
-  padding-top: 0.5rem;
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  clear: both;
 }
 
 .link-note a {

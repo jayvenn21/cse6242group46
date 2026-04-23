@@ -1,5 +1,5 @@
 /**
- * Fire risk explorer: Leaflet map (reliable sizing in previews) + D3 scales / charts.
+ * Fire risk explorer: Leaflet map + D3 (linked charts, interaction, scales).
  * Serve repo root: python3 -m http.server 8000 → /frontend/index.html
  */
 (function () {
@@ -30,6 +30,13 @@
     { value: "target_next_interval", label: "Next-interval target" },
   ];
 
+  /** Probabilities (and ARIMA prob) for the time-series / comparison chart */
+  const TS_METRICS = [
+    { key: "rf_prob", name: "RF", color: "#7dd3fc" },
+    { key: "hotspot_prob", name: "Hotspot", color: "#fb923c" },
+    { key: "arima_prob", name: "ARIMA", color: "#4ade80" },
+  ];
+
   const el = {
     err: d3.select("#error-banner"),
     dateSlider: d3.select("#date-slider"),
@@ -38,15 +45,41 @@
     dateNext: d3.select("#date-next"),
     metric: d3.select("#metric-select"),
     asideTitle: d3.select("#panel-title"),
-    detail: d3.select("#cell-detail"),
+    cellHint: d3.select("#cell-hint"),
+    distChart: d3.select("#dist-chart"),
+    tsChart: d3.select("#ts-chart"),
+    tableWrap: d3.select("#table-wrap"),
     shap: d3.select("#shap-chart"),
     status: d3.select("#map-status"),
     explain: d3.select("#explanation"),
+    sectionExplain: d3.select("#section-explain"),
+    sectionShap: d3.select("#section-shap"),
+    sectionSnapshot: d3.select("#section-snapshot"),
     colorG: d3.select("#legend-swatch"),
+    tooltip: d3.select("#chart-tooltip"),
   };
 
   const fmt = d3.format(".3f");
   const fmt2 = d3.format(".2f");
+
+  function fieldHasValue(v) {
+    if (v === undefined || v === null) {
+      return false;
+    }
+    if (typeof v === "number") {
+      return v === v;
+    }
+    if (typeof v === "string") {
+      return v.trim() !== "";
+    }
+    return true;
+  }
+
+  function setInterpretationSections(exRow, hasNarrative) {
+    const showExplain = Boolean(!exRow || hasNarrative);
+    el.sectionExplain.property("hidden", !showExplain);
+    el.sectionShap.property("hidden", !exRow);
+  }
 
   function showError(msg) {
     el.err.classed("visible", true).text(msg);
@@ -82,6 +115,14 @@
     return String(d);
   }
 
+  function parseISODate(iso) {
+    const p = String(iso).split("-");
+    if (p.length !== 3) {
+      return new Date(iso);
+    }
+    return new Date(+p[0], +p[1] - 1, +p[2]);
+  }
+
   function colorScaleFor(rows, metric) {
     const ex0 = valueExtent(rows, metric);
     let lo = ex0[0];
@@ -90,6 +131,35 @@
       hi = lo + 1e-9;
     }
     return d3.scaleSequential(d3.interpolateYlOrRd).domain([lo, hi]);
+  }
+
+  function moveTooltip(x, y, html) {
+    const pad = 12;
+    const node = el.tooltip.node();
+    if (!node) {
+      return;
+    }
+    el.tooltip
+      .html(html)
+      .classed("visible", true)
+      .attr("aria-hidden", "false");
+    const tw = node.offsetWidth;
+    const th = node.offsetHeight;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    let left = x + pad;
+    let top = y + pad;
+    if (left + tw > w) {
+      left = x - tw - pad;
+    }
+    if (top + th > h) {
+      top = y - th - pad;
+    }
+    el.tooltip.style("left", left + "px").style("top", top + "px");
+  }
+
+  function hideTooltip() {
+    el.tooltip.classed("visible", false).attr("aria-hidden", "true");
   }
 
   Promise.all([
@@ -105,6 +175,11 @@
         r.date = normDate(r.date);
       }
       const byDate = d3.group(modelRows, (d) => d.date);
+      const byGrid = d3.rollup(
+        modelRows,
+        (rows) => rows.slice().sort((a, b) => a.date.localeCompare(b.date)),
+        (d) => d.grid_id
+      );
       const dates = Array.from(byDate.keys()).sort();
       if (!dates.length) {
         throw new Error("No dates in model_results.csv");
@@ -125,19 +200,35 @@
           .sort();
       }
 
+      function rowsForGrid(gid) {
+        return byGrid.get(gid) || [];
+      }
+
       let dateIndex = dates.length - 1;
+      let selectedGid = null;
+      let selectedFeature = null;
 
       function currentDateStr() {
         return dates[dateIndex];
       }
 
+      function dateIndexForISO(iso) {
+        const t = parseISODate(iso);
+        const ts = t.getTime();
+        let best = 0;
+        let bestD = Infinity;
+        dates.forEach((d, i) => {
+          const diff = Math.abs(parseISODate(d).getTime() - ts);
+          if (diff < bestD) {
+            bestD = diff;
+            best = i;
+          }
+        });
+        return best;
+      }
+
       function formatDateLong(iso) {
-        const p = String(iso).split("-");
-        if (p.length !== 3) {
-          return iso;
-        }
-        const dt = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
-        return dt.toLocaleDateString(undefined, {
+        return parseISODate(iso).toLocaleDateString(undefined, {
           weekday: "short",
           month: "short",
           day: "numeric",
@@ -159,18 +250,6 @@
         el.datePrev.property("disabled", dateIndex <= 0);
         el.dateNext.property("disabled", dateIndex >= dates.length - 1);
         el.dateSlider.attr("aria-valuetext", currentDateStr());
-      }
-
-      function onDateChangedByUser() {
-        selectedGid = null;
-        renderMap();
-        el.asideTitle.text("Select a cell");
-        el.detail.html(
-          "<p class=\"hint\">Click a cell for drivers and model inputs.</p>"
-        );
-        el.shap.html("");
-        el.explain.html("");
-        invalidateMapSize();
       }
 
       el.metric
@@ -197,7 +276,6 @@
         }
       ).addTo(map);
 
-      let selectedGid = null;
       let currentColorScale = d3
         .scaleSequential(d3.interpolateYlOrRd)
         .domain([0, 1]);
@@ -292,17 +370,462 @@
 
       syncStyleStateFromControls();
 
+      function renderDistributionChart() {
+        const metric = el.metric.property("value");
+        const dStr = currentDateStr();
+        const sub = byDate.get(dStr) || [];
+        const label =
+          METRIC_OPTIONS.find((m) => m.value === metric)?.label || metric;
+        d3.select("#dist-caption").text(
+          "Distribution of " +
+            label +
+            " across " +
+            sub.length +
+            " cells with a row on this date. Hover a bar for the count in that bin."
+        );
+        const vals = sub
+          .map((d) => +d[metric])
+          .filter((v) => v === v);
+        el.distChart.html("");
+
+        if (vals.length < 2) {
+          el.distChart
+            .append("p")
+            .attr("class", "hint")
+            .text("Not enough values to form a histogram for this day and metric.");
+          return;
+        }
+
+        const M = { top: 6, right: 8, bottom: 42, left: 36 };
+        const W = 320;
+        const H = 158;
+        const w = W - M.left - M.right;
+        const h = H - M.top - M.bottom;
+
+        const ex = d3.extent(vals);
+        const hGen = d3
+          .histogram()
+          .domain(ex)
+          .thresholds(14);
+        const bins = hGen(vals);
+        if (!bins.length) {
+          return;
+        }
+        const maxC = d3.max(bins, (b) => b.length) || 1;
+        const xH = d3
+          .scaleLinear()
+          .domain([bins[0].x0, bins[bins.length - 1].x1])
+          .range([0, w]);
+        const yH = d3.scaleLinear().domain([0, maxC]).nice().range([h, 0]);
+        const axB = d3.axisBottom(xH).ticks(5).tickFormat((v) => fmt2(v));
+        const axL = d3
+          .axisLeft(yH)
+          .ticks(4)
+          .tickFormat(d3.format("d"));
+
+        const root = el.distChart
+          .append("svg")
+          .attr("class", "d3-svg")
+          .attr("viewBox", "0 0 " + W + " " + H)
+          .attr("width", "100%");
+        const g = root
+          .append("g")
+          .attr("transform", `translate(${M.left},${M.top})`);
+
+        g.append("g")
+          .attr("class", "axis")
+          .attr("transform", `translate(0,${h})`)
+          .call(axB)
+          .call((gg) => gg.select(".domain").remove())
+          .append("text")
+          .attr("x", w / 2)
+          .attr("y", 32)
+          .attr("text-anchor", "middle")
+          .attr("class", "axis-title")
+          .text(label);
+
+        g.append("g")
+          .attr("class", "axis")
+          .call(axL)
+          .call((gg) => gg.select(".domain").remove());
+
+        g.selectAll("rect.hist")
+          .data(bins)
+          .join("rect")
+          .attr("class", "hist-bar")
+          .attr("x", (b) => xH(b.x0) + 1)
+          .attr("width", (b) => Math.max(0, xH(b.x1) - xH(b.x0) - 2))
+          .attr("y", (b) => yH(b.length))
+          .attr("height", (b) => yH(0) - yH(b.length))
+          .attr("fill", "#3b5d8a")
+          .on("mouseenter", function (ev, b) {
+            d3.select(this).attr("fill", "#60a5fa");
+            moveTooltip(
+              ev.clientX,
+              ev.clientY,
+              "<strong>" +
+                b.length +
+                " cell(s)</strong><br/>[" +
+                fmt2(b.x0) +
+                " — " +
+                fmt2(b.x1) +
+                "]"
+            );
+          })
+          .on("mouseleave", function () {
+            d3.select(this).attr("fill", "#3b5d8a");
+            hideTooltip();
+          });
+      }
+
+      function renderTimeSeriesForGrid(gid) {
+        const rows = rowsForGrid(gid);
+        el.tsChart.html("");
+
+        if (rows.length < 2) {
+          el.tsChart
+            .append("p")
+            .attr("class", "hint")
+            .text(
+              "This grid has too few time points in the model CSV to draw a series."
+            );
+          return;
+        }
+
+        const M = { top: 12, right: 12, left: 48, bottom: 0 };
+        const W = 400;
+        const tMin = d3.min(rows, (d) => parseISODate(d.date));
+        const tMax = d3.max(rows, (d) => parseISODate(d.date));
+        const w = W - M.left - M.right;
+        const h = 118;
+        const xAxisLabelRoom = 40;
+        const afterAxisGap = 10;
+        const legY = M.top + h + xAxisLabelRoom + afterAxisGap;
+        const H = legY + 16;
+        const x = d3
+          .scaleTime()
+          .domain(
+            tMin.getTime() === tMax.getTime()
+              ? [
+                  d3.timeDay.offset(tMin, -1),
+                  d3.timeDay.offset(tMax, 1),
+                ]
+              : [tMin, tMax]
+          )
+          .range([0, w]);
+        const xDom = x.domain();
+        const tTick0 = xDom[0];
+        const tTick1 = xDom[1];
+        const tickCount = 6;
+        const tickTimes =
+          tTick0.getTime() === tTick1.getTime()
+            ? [tTick0, d3.timeDay.offset(tTick0, 1)]
+            : d3.range(0, tickCount).map((i) => {
+                const t0m = tTick0.getTime();
+                const t1m = tTick1.getTime();
+                return new Date(
+                  t0m + (i / (tickCount - 1)) * (t1m - t0m || 1)
+                );
+              });
+        const allV = rows.flatMap((d) =>
+          TS_METRICS.map((m) => +d[m.key])
+            .filter((v) => v === v)
+        );
+        const yM = d3
+          .scaleLinear()
+          .domain([0, Math.max(1, d3.max(allV) || 1) * 1.05])
+          .range([h, 0]);
+        const curT = parseISODate(currentDateStr());
+        const lineG = d3
+          .line()
+          .defined((d) => d._v === d._v)
+          .x((d) => x(parseISODate(d.date)))
+          .y((d) => yM(d._v));
+
+        const root = el.tsChart
+          .append("svg")
+          .attr("class", "d3-svg d3-interactive")
+          .attr("viewBox", "0 0 " + W + " " + H)
+          .attr("width", "100%")
+          .attr("overflow", "visible");
+        const g = root
+          .append("g")
+          .attr("transform", `translate(${M.left},${M.top})`);
+
+        g.append("g")
+          .attr("class", "axis")
+          .call(d3.axisLeft(yM).ticks(4).tickFormat((v) => fmt2(v)));
+
+        const xg = g
+          .append("g")
+          .attr("class", "axis")
+          .attr("transform", `translate(0,${h})`)
+          .call(
+            d3
+              .axisBottom(x)
+              .tickValues(tickTimes)
+              .tickFormat(d3.timeFormat("%b %d"))
+          );
+        xg
+          .selectAll("text")
+          .attr("transform", "rotate(-32)")
+          .attr("text-anchor", "end")
+          .attr("dx", "-0.65em")
+          .attr("dy", "0.4em");
+
+        TS_METRICS.forEach((spec) => {
+          const pts = rows
+            .map((d) => ({
+              date: d.date,
+              _v: +d[spec.key],
+            }))
+            .filter((d) => d._v === d._v);
+          g.append("path")
+            .datum(pts)
+            .attr("class", "ts-line")
+            .attr("d", lineG)
+            .attr("stroke", spec.color)
+            .attr("fill", "none")
+            .attr("stroke-width", 2.2);
+        });
+
+        g.append("line")
+          .attr("class", "ts-focus")
+          .attr("x1", x(curT))
+          .attr("x2", x(curT))
+          .attr("y1", 0)
+          .attr("y2", h)
+          .attr("pointer-events", "none");
+
+        const legend = root
+          .append("g")
+          .attr("transform", `translate(${M.left + 2},${legY})`)
+          .attr("class", "ts-legend");
+        const legStep = 112;
+        TS_METRICS.forEach((spec, i) => {
+          const lg = legend
+            .append("g")
+            .attr("transform", `translate(${i * legStep},0)`);
+          lg.append("line")
+            .attr("x1", 0)
+            .attr("x2", 20)
+            .attr("y1", 0)
+            .attr("y2", 0)
+            .attr("stroke", spec.color)
+            .attr("stroke-width", 3);
+          lg.append("text")
+            .attr("x", 24)
+            .attr("y", 3.5)
+            .attr("class", "ts-legend-text")
+            .text(spec.name);
+        });
+
+        const over = g
+          .append("rect")
+          .attr("width", w)
+          .attr("height", h)
+          .attr("fill", "transparent")
+          .attr("class", "ts-capture");
+
+        const idxForMouse = (clientX) => {
+          const svgN = root.node();
+          if (!svgN) {
+            return 0;
+          }
+          const box = root.node().getBoundingClientRect();
+          const sc = W / box.width;
+          const gx = (clientX - box.left) * sc - M.left;
+          const t = x.invert(Math.max(0, Math.min(w, gx)));
+          let bestI = 0;
+          let bestD = Infinity;
+          rows.forEach((r, i) => {
+            const dt = Math.abs(parseISODate(r.date) - t);
+            if (dt < bestD) {
+              bestD = dt;
+              bestI = i;
+            }
+          });
+          return bestI;
+        };
+
+        over
+          .on("mousemove", function (ev) {
+            const i = idxForMouse(ev.clientX);
+            const r = rows[i];
+            const ttip = TS_METRICS.map(
+              (m) =>
+                "<tr><td style=\"color:" +
+                m.color +
+                "\">" +
+                m.name +
+                "</td><td>" +
+                (r[m.key] === r[m.key] ? fmt2(+r[m.key]) : "—") +
+                "</td></tr>"
+            ).join("");
+            moveTooltip(
+              ev.clientX,
+              ev.clientY,
+              "<div class=\"tt-header\">" + r.date + "</div><table class=\"tt-table\">" + ttip + "</table>"
+            );
+          })
+          .on("mouseleave", hideTooltip)
+          .on("click", function (ev) {
+            const i = idxForMouse(ev.clientX);
+            dateIndex = dateIndexForISO(rows[i].date);
+            syncDateUI();
+            onDateChanged();
+          });
+      }
+
+      function renderShapChart(row) {
+        if (!row) {
+          el.shap.html("");
+          return;
+        }
+        const top = [
+          { name: row.top_driver_1, val: +row.top_driver_1_shap || 0 },
+          { name: row.top_driver_2, val: +row.top_driver_2_shap || 0 },
+          { name: row.top_driver_3, val: +row.top_driver_3_shap || 0 },
+        ]
+          .filter((d) => d.name)
+          .sort((a, b) => Math.abs(b.val) - Math.abs(a.val));
+        if (!top.length) {
+          el.shap
+            .append("p")
+            .attr("class", "hint")
+            .text("No top-driver SHAP columns in this row.");
+          return;
+        }
+        const M = { top: 8, right: 6, bottom: 30, left: 120 };
+        const W = 300;
+        const N = top.length;
+        const rowH = 28;
+        const H = M.top + N * rowH + M.bottom;
+        const w = W - M.left - M.right;
+        const h = N * rowH;
+        const y = d3
+          .scaleBand()
+          .domain(top.map((d) => d.name))
+          .range([0, h])
+          .padding(0.2);
+        const valsN = top.map((d) => d.val);
+        const lo0 = d3.min(valsN);
+        const hi0 = d3.max(valsN);
+        const pad = Math.max(0.01, (hi0 - lo0) * 0.15 || 0.02);
+        const x = d3
+          .scaleLinear()
+          .domain(
+            lo0 < 0 && hi0 > 0
+              ? [lo0 * 1.1 - pad, hi0 * 1.1 + pad]
+              : [Math.min(0, lo0 - pad), Math.max(0, hi0 + pad)]
+          )
+          .range([0, w])
+          .nice();
+
+        el.shap.html("");
+        const svg = el.shap
+          .append("svg")
+          .attr("class", "d3-svg d3-shap")
+          .attr("viewBox", "0 0 " + W + " " + H)
+          .attr("width", "100%");
+        const g = svg
+          .append("g")
+          .attr("transform", `translate(${M.left},${M.top})`);
+        g.append("line")
+          .attr("class", "shap-zero")
+          .attr("x1", x(0))
+          .attr("x2", x(0))
+          .attr("y1", 0)
+          .attr("y2", h);
+        g.append("g")
+          .attr("class", "axis")
+          .attr("transform", `translate(0,${h})`)
+          .call(
+            d3
+              .axisBottom(x)
+              .ticks(4)
+              .tickSizeOuter(0)
+          )
+          .append("text")
+          .attr("x", w / 2)
+          .attr("y", 24)
+          .attr("class", "axis-title")
+          .text("SHAP (impact on log-odds)");
+
+        g.selectAll("g.barw")
+          .data(top)
+          .join("g")
+          .attr("class", "barw")
+          .attr("transform", (d) => `translate(0,${y(d.name)})`)
+          .each(function (d) {
+            const g0 = d3.select(this);
+            const x0 = d.val < 0 ? x(d.val) : x(0);
+            const w0 = Math.max(1, Math.abs(x(d.val) - x(0)));
+            g0
+              .append("text")
+              .attr("class", "shap-feat")
+              .attr("x", -6)
+              .attr("y", y.bandwidth() / 2)
+              .attr("dy", "0.35em")
+              .attr("text-anchor", "end")
+              .text(
+                d.name.length > 22
+                  ? d.name.slice(0, 20) + "…"
+                  : d.name
+              );
+            g0
+              .append("rect")
+              .attr("class", "shap-rect")
+              .attr("x", x0)
+              .attr("y", 0)
+              .attr("width", w0)
+              .attr("height", y.bandwidth())
+              .attr("fill", d.val < 0 ? "#a8554c" : "#3b6ea8");
+          })
+          .on("mouseenter", function (ev, d) {
+            moveTooltip(
+              ev.clientX,
+              ev.clientY,
+              "<div class=\"tt-header\">" + d.name + "</div>SHAP: <strong>" + fmt2(d.val) + "</strong>"
+            );
+            d3.select(this).select("rect").attr("opacity", 0.85);
+          })
+          .on("mouseleave", function () {
+            d3.select(this).select("rect").attr("opacity", 1);
+            hideTooltip();
+          });
+      }
+
+      function onDateChanged() {
+        renderMap();
+        renderDistributionChart();
+        if (selectedFeature) {
+          showDetail(selectedFeature);
+        } else {
+          el.asideTitle.text("Select a cell");
+          el.tableWrap.html("");
+          el.explain.html("");
+          el.shap.html("");
+          el.sectionSnapshot.property("hidden", true);
+          setInterpretationSections(false, false);
+          el.tsChart.html(
+            "<p class=\"hint\">Select a map cell to load cross-date probability curves. Click the chart to move the time scrubber to that day.</p>"
+          );
+        }
+        invalidateMapSize();
+      }
+
       const geoLayer = L.geoJSON(geo, {
         style: styleForFeature,
         onEachFeature(feature, layer) {
           layer.on({
             click() {
               selectedGid = feature.properties.grid_id;
+              selectedFeature = feature;
               geoLayer.setStyle(styleForFeature);
               showDetail(feature);
             },
             mouseover() {
-              const dStr = currentDateStr();
               const rmap = rowMap();
               const row = rmap.get(feature.properties.grid_id);
               const m = el.metric.property("value");
@@ -318,9 +841,8 @@
             mouseout() {
               const dStr = currentDateStr();
               const n = byDate.get(dStr)?.length || 0;
-              const metric = el.metric.property("value");
               const lab = METRIC_OPTIONS.find(
-                (o) => o.value === metric
+                (o) => o.value === el.metric.property("value")
               )?.label;
               el.status.text(
                 "Date: " + dStr + " · " + n + " modeled cells · " + lab
@@ -338,86 +860,13 @@
         syncStyleStateFromControls();
         geoLayer.setStyle(styleForFeature);
         el.status.text(
-          "Date: " +
-            dStr +
+          dStr +
             " · " +
             sub.length +
-            " modeled cells (others: no row this date) · " +
+            " cells with a row (others: no data this day) · " +
             (METRIC_OPTIONS.find((o) => o.value === styleMetric)?.label ||
               styleMetric)
         );
-      }
-
-      function shapBarChart(row) {
-        if (!row) {
-          el.shap.html("");
-          return;
-        }
-        const top = [
-          { name: row.top_driver_1, val: +row.top_driver_1_shap || 0 },
-          { name: row.top_driver_2, val: +row.top_driver_2_shap || 0 },
-          { name: row.top_driver_3, val: +row.top_driver_3_shap || 0 },
-        ].filter((d) => d.name);
-
-        if (!top.length) {
-          el.shap.html(
-            "<p class=\"hint\">No top-driver SHAP columns for this row.</p>"
-          );
-          return;
-        }
-        const W = 280;
-        const H = 100;
-        const m = { top: 6, right: 8, bottom: 4, left: 6 };
-        const w = W - m.left - m.right;
-        const h = H - m.top - m.bottom;
-        const y = d3
-          .scaleBand()
-          .domain(top.map((d) => d.name))
-          .range([0, h])
-          .padding(0.25);
-        const vals = top.map((d) => d.val);
-        const minV = d3.min(vals);
-        const maxV = d3.max(vals);
-        const x = d3.scaleLinear().range([0, w]);
-        if (minV < 0) {
-          x.domain([minV * 1.1 - 1e-6, maxV * 1.1 + 1e-6]);
-        } else {
-          x.domain([0, (maxV || 0) * 1.05 + 1e-6]);
-        }
-
-        el.shap.html("");
-        const s = el.shap
-          .append("svg")
-          .attr("viewBox", `0 0 ${W} ${H}`)
-          .attr("width", "100%")
-          .append("g")
-          .attr("transform", `translate(${m.left},${m.top})`);
-
-        s.append("line")
-          .attr("x1", x(0))
-          .attr("x2", x(0))
-          .attr("y1", 0)
-          .attr("y2", h)
-          .attr("stroke", "#2d3a4d")
-          .attr("stroke-width", 1);
-
-        s.selectAll("rect")
-          .data(top)
-          .join("rect")
-          .attr("class", (d) => "bar" + (d.val < 0 ? " neg" : ""))
-          .attr("x", (d) => Math.min(x(0), x(d.val)))
-          .attr("y", (d) => y(d.name))
-          .attr("width", (d) => Math.abs(x(d.val) - x(0)))
-          .attr("height", y.bandwidth());
-
-        s.selectAll("text.lbl")
-          .data(top)
-          .join("text")
-          .attr("class", "bar-label")
-          .attr("x", 0)
-          .attr("y", (d) => y(d.name) + y.bandwidth() / 2)
-          .attr("dy", "0.32em")
-          .text((d) => d.name);
       }
 
       function showDetail(feature) {
@@ -425,18 +874,9 @@
         const dStr = currentDateStr();
         const rmap = rowMap();
         const row = rmap.get(gid);
-
-        if (!row) {
-          el.asideTitle.text(gid);
-          el.detail.html(
-            "<p class=\"hint\">No model row for this cell and date in model_results.csv.</p>"
-          );
-          el.explain.html("");
-          el.shap.html("");
-          return;
-        }
-
+        selectedGid = gid;
         el.asideTitle.text(gid);
+        el.sectionSnapshot.property("hidden", false);
         const metric = el.metric.property("value");
         const keys = [
           "date",
@@ -456,62 +896,77 @@
         const exRow = explainLookup
           ? explainLookup(gid, dStr)
           : null;
+        const hasNarrative = Boolean(
+          exRow &&
+            exRow.explanation_text &&
+            String(exRow.explanation_text).trim() !== ""
+        );
         if (exRow) {
-          shapBarChart(exRow);
-          el.explain.html(
-            exRow.explanation_text
-              ? "<div class=\"explain-box\">" +
+          renderShapChart(exRow);
+          if (hasNarrative) {
+            el.explain.html(
+              "<div class=\"explain-box\">" +
                 exRow.explanation_text +
                 "</div>"
-              : ""
-          );
+            );
+          } else {
+            el.explain.html("");
+          }
         } else {
           const altDates = explainDatesForGrid(gid);
           const subsetNote =
-            "<p class=\"hint\">SHAP text and driver bars are only in " +
-            "<code>outputs/interpretability/explanations.csv</code> for a " +
-            "<strong>small curated subset</strong> of (cell, date) pairs " +
-            "(e.g. high <code>rf_prob</code> runs), not for every grid day.</p>";
+            "<p class=\"hint\">SHAP and narrative text are only in " +
+            "<code>explanations.csv</code> for a <strong>curated subset</strong> of (cell, date) pairs.</p>";
           if (altDates.length) {
             el.explain.html(
               subsetNote +
                 "<p class=\"hint\">For <strong>" +
                 gid +
-                "</strong>, that file includes dates: " +
+                "</strong> that file has dates: " +
                 altDates.join(", ") +
-                ". Move the <strong>time scrubber</strong> (slider or ← →) to " +
-                "one of those days to load the narrative and SHAP bars.</p>"
+                ". Scrub the time control to one of these days to load them.</p>"
             );
           } else {
             el.explain.html(
               subsetNote +
-                "<p class=\"hint\">This grid id never appears in that file; " +
-                "pick another cell or extend the pipeline to export SHAP for " +
-                "more (grid_id, date) rows.</p>"
+                "<p class=\"hint\">This <code>grid_id</code> is not in that file.</p>"
             );
           }
           el.shap.html("");
         }
 
-        const rows = keys
-          .filter(
-            (k) =>
-              row[k] !== undefined &&
-              row[k] !== null &&
-              String(row[k]) !== ""
-          )
-          .map(
-            (k) =>
-              "<tr><th>" +
-              k +
-              "</th><td>" +
-              (typeof row[k] === "number" ? fmt2(row[k]) : String(row[k])) +
-              (k === metric ? " (mapped)" : "") +
-              "</td></tr>"
+        setInterpretationSections(exRow, hasNarrative);
+
+        renderTimeSeriesForGrid(gid);
+        if (!row) {
+          el.tableWrap.html(
+            "<p class=\"hint\">No row in model_results.csv for " +
+              dStr +
+              " — the time series and map still use other rows for this <code>grid_id</code> when available.</p>"
           );
-        el.detail.html(
-          "<table class=\"dl-table\">" + rows.join("") + "</table>"
-        );
+        } else {
+          const tableRows = keys
+            .filter((k) => fieldHasValue(row[k]))
+            .map(
+              (k) =>
+                "<tr><th>" +
+                k +
+                "</th><td>" +
+                (typeof row[k] === "number" ? fmt2(row[k]) : String(row[k])) +
+                (k === metric ? " (mapped)" : "") +
+                "</td></tr>"
+            );
+          if (tableRows.length) {
+            el.tableWrap.html(
+              "<table class=\"dl-table\">" + tableRows.join("") + "</table>"
+            );
+          } else {
+            el.tableWrap.html(
+              "<p class=\"hint\">No non-empty fields to show for this row.</p>"
+            );
+          }
+        }
+        geoLayer.setStyle(styleForFeature);
       }
 
       function invalidateMapSize() {
@@ -524,28 +979,32 @@
       }
 
       syncDateUI();
+
       el.dateSlider.on("input", () => {
         dateIndex = Number(el.dateSlider.property("value"));
         syncDateUI();
-        onDateChangedByUser();
+        onDateChanged();
       });
       el.datePrev.on("click", () => {
         if (dateIndex > 0) {
           dateIndex -= 1;
           syncDateUI();
-          onDateChangedByUser();
+          onDateChanged();
         }
       });
       el.dateNext.on("click", () => {
         if (dateIndex < dates.length - 1) {
           dateIndex += 1;
           syncDateUI();
-          onDateChangedByUser();
+          onDateChanged();
         }
       });
       el.metric.on("change", () => {
-        selectedGid = null;
         renderMap();
+        renderDistributionChart();
+        if (selectedFeature) {
+          showDetail(selectedFeature);
+        }
       });
 
       d3.select(window).on("resize", invalidateMapSize);
@@ -558,7 +1017,11 @@
       setTimeout(invalidateMapSize, 50);
       setTimeout(invalidateMapSize, 300);
 
+      el.tsChart.html(
+        "<p class=\"hint\">Select a map cell. Then hover the time-series plot for all three model probabilities, or <strong>click</strong> the plot to move the time scrubber.</p>"
+      );
       renderMap();
+      renderDistributionChart();
     })
     .catch((e) => {
       console.error(e);

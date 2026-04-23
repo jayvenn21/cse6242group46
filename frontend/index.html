@@ -67,20 +67,67 @@
             </div>
           </div>
         </div>
-        <aside aria-label="Cell detail">
-          <h2 id="panel-title">Select a cell</h2>
-          <p class="hint" id="cell-detail">
-            Click a map cell to see that grid’s model inputs, predictions, and
-            (when available) SHAP-based drivers for the same date.
-          </p>
-          <h2>Why this cell? (explanations)</h2>
-          <div id="explanation"></div>
-          <h2>Top SHAP drivers</h2>
-          <div id="shap-chart"></div>
+        <aside aria-label="Cell detail" class="detail-aside">
+          <section class="side-block">
+            <h2 id="panel-title">Select a cell</h2>
+            <p class="hint" id="cell-hint">
+              Click a map cell. The time scrubber updates the map; your selection
+              is kept so charts follow the same grid across days.
+            </p>
+          </section>
+          <section class="side-block" aria-labelledby="dist-heading">
+            <h2 id="dist-heading">Distribution on this day</h2>
+            <p class="subhead" id="dist-caption">
+              Histogram of the current “Color by” metric across cells that have a
+              row today (read-only; hover bars).
+            </p>
+            <div id="dist-chart" class="d3-panel" aria-label="Distribution histogram"></div>
+          </section>
+          <section class="side-block" aria-labelledby="ts-heading">
+            <h2 id="ts-heading">This cell over time</h2>
+            <p class="subhead" id="ts-caption">
+              Model probabilities across all dates in the CSV for the selected
+              cell. <strong>Click</strong> the chart to jump the map to a date;
+              <strong>hover</strong> for values.
+            </p>
+            <div id="ts-chart" class="d3-panel" aria-label="Time series of model probabilities"></div>
+          </section>
+          <section
+            class="side-block"
+            id="section-snapshot"
+            hidden
+            aria-labelledby="snap-heading"
+          >
+            <h2 id="snap-heading">Snapshot (selected day)</h2>
+            <div id="table-wrap" class="data-snapshot"></div>
+          </section>
+          <section
+            class="side-block"
+            id="section-explain"
+            hidden
+            aria-label="Narrative explanation"
+          >
+            <h2>Why this cell? (explanations)</h2>
+            <div id="explanation"></div>
+          </section>
+          <section
+            class="side-block"
+            id="section-shap"
+            hidden
+            aria-label="SHAP driver strength"
+          >
+            <h2>Top SHAP drivers</h2>
+            <div id="shap-chart" class="d3-panel" aria-label="SHAP bar chart"></div>
+          </section>
+          <div
+            id="chart-tooltip"
+            class="chart-tooltip"
+            role="tooltip"
+            aria-hidden="true"
+          ></div>
           <p class="link-note">
-            Map uses <strong>Leaflet</strong> (reliable in VS Code preview and
-            browsers). Colors and charts use <strong>D3</strong>. Serve from
-            repo root with a local HTTP server.
+            Map: <strong>Leaflet</strong>. Analytics: <strong>D3</strong> (linked
+            views, axes, pointer interaction). Serve from repo root.
           </p>
         </aside>
       </main>
