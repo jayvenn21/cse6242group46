@@ -164,7 +164,8 @@ main {
 #map-container {
   position: relative;
   min-height: 0;
-  background: #0a0e14;
+  /* Between tiles (Voyager land is ~#dbe0e0); avoids harsh black when panning. */
+  background: #d6d8dc;
   height: 100%;
   align-self: stretch;
   overflow: hidden;
@@ -182,12 +183,7 @@ main {
 
 .leaflet-container {
   font-family: inherit;
-  background: #0a0e14;
-}
-
-#leaflet-map .leaflet-tile-pane {
-  /* Subtle pop on CARTO dark; keeps grid colors readable. */
-  filter: saturate(1.06) contrast(1.04);
+  background: #d6d8dc;
 }
 
 .status-line {

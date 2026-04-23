@@ -269,7 +269,7 @@
       });
 
       L.tileLayer(
-        "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+        "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
         {
           attribution:
             '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
@@ -358,14 +358,14 @@
         const noData =
           !row || row[metric] === null || row[metric] === undefined;
         const fill = noData
-          ? "#3d4555"
+          ? "#9aa5b2"
           : currentColorScale(+row[metric]);
         return {
           fillColor: fill,
-          color: selected ? "#60a5fa" : "rgba(255, 255, 255, 0.16)",
-          weight: selected ? 2.5 : 0.5,
+          color: selected ? "#2563eb" : "rgba(15, 23, 42, 0.3)",
+          weight: selected ? 2.5 : 0.45,
           opacity: 1,
-          fillOpacity: noData ? 0.4 : 0.88,
+          fillOpacity: noData ? 0.55 : 0.9,
         };
       }
 
