@@ -19,6 +19,10 @@
       "../outputs/interpretability/explanations.csv",
       document.baseURI
     ).href,
+    evaluationReport: new URL(
+      "../baselines/outputs/evaluation_report.txt",
+      document.baseURI
+    ).href,
   };
 
   const METRIC_OPTIONS = [
@@ -63,6 +67,8 @@
     sectionSnapshot: d3.select("#section-snapshot"),
     colorG: d3.select("#legend-swatch"),
     tooltip: d3.select("#chart-tooltip"),
+    evalReport: d3.select("#eval-report"),
+    dateExports: d3.select("#date-exports"),
   };
 
   const fmt = d3.format(".3f");
@@ -172,8 +178,9 @@
     d3.json(DATA.grid),
     d3.csv(DATA.model, d3.autoType),
     d3.csv(DATA.explain, d3.autoType).catch(() => []),
+    d3.text(DATA.evaluationReport).catch(() => ""),
   ])
-    .then(([geo, modelRows, explainRows]) => {
+    .then(([geo, modelRows, explainRows, evalText]) => {
       for (const r of modelRows) {
         r.date = normDate(r.date);
       }
@@ -196,6 +203,14 @@
           ? loadExplainIndex(explainRows)
           : null;
 
+      if (evalText && String(evalText).trim() !== "") {
+        el.evalReport.text(String(evalText).trim());
+      } else {
+        el.evalReport.html(
+          "<p class=\"hint\">No <code>baselines/outputs/evaluation_report.txt</code> found. Run the baselines pipeline to generate it.</p>"
+        );
+      }
+
       function explainDatesForGrid(gid) {
         if (!explainRows || !explainRows.length) {
           return [];
@@ -217,6 +232,82 @@
 
       function currentDateStr() {
         return dates[dateIndex];
+      }
+
+      function canLoadImage(url) {
+        return new Promise((resolve) => {
+          const im = new Image();
+          im.onload = function () {
+            resolve(true);
+          };
+          im.onerror = function () {
+            resolve(false);
+          };
+          im.src = url;
+        });
+      }
+
+      function renderDateExportFigs() {
+        const dStr = currentDateStr();
+        const heatUrl = new URL(
+          "../outputs/maps/risk_heatmap_" + dStr + ".png",
+          document.baseURI
+        ).href;
+        const apUrl = new URL(
+          "../outputs/maps/actual_vs_pred_" + dStr + ".png",
+          document.baseURI
+        ).href;
+        el.dateExports.html(
+          "<p class=\"date-export-wait\" role=\"status\">Checking dated map exports…</p>"
+        );
+        Promise.all([
+          canLoadImage(heatUrl).then((ok) =>
+            ok
+              ? {
+                  url: heatUrl,
+                  cap: "Risk heatmap (saved PNG)",
+                }
+              : null
+          ),
+          canLoadImage(apUrl).then((ok) =>
+            ok
+              ? {
+                  url: apUrl,
+                  cap: "Actual vs predicted (saved PNG)",
+                }
+              : null
+          ),
+        ]).then((parts) => {
+          const ok = parts.filter(Boolean);
+          el.dateExports.html("");
+          if (!ok.length) {
+            el.dateExports
+              .append("p")
+              .attr("class", "hint")
+              .text(
+                "No pipeline PNGs for " +
+                  dStr +
+                  " in outputs/maps/ (optional files: " +
+                  "risk_heatmap_YYYY-MM-DD.png, actual_vs_pred_YYYY-MM-DD.png)."
+              );
+            return;
+          }
+          const g = el.dateExports
+            .append("div")
+            .attr("class", "date-export-figs");
+          ok.forEach((p) => {
+            const fig = g.append("figure").attr("class", "output-fig");
+            fig
+              .append("img")
+              .attr("src", p.url)
+              .attr("alt", p.cap)
+              .attr("loading", "lazy");
+            fig
+              .append("figcaption")
+              .attr("class", "output-fig-cap")
+              .text(p.cap);
+          });
+        });
       }
 
       function dateIndexForISO(iso) {
@@ -835,6 +926,7 @@
             el.dateReadout.classed("date-readout--flash", false);
           }, 320);
         }
+        renderDateExportFigs();
       }
 
       const geoLayer = L.geoJSON(geo, {
@@ -1117,6 +1209,7 @@
       );
       renderMap();
       renderDistributionChart();
+      renderDateExportFigs();
     })
     .catch((e) => {
       console.error(e);

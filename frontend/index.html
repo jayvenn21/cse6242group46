@@ -144,9 +144,110 @@
             role="tooltip"
             aria-hidden="true"
           ></div>
+          <section class="side-block side-block-outputs" aria-labelledby="outputs-heading">
+            <details class="outputs-details" id="outputs-details">
+              <summary
+                class="outputs-summary"
+                id="outputs-heading"
+              >
+                More outputs (report, metrics plots, static maps)
+              </summary>
+              <div class="outputs-body">
+                <h3 class="outputs-subh">Test-set summary (text)</h3>
+                <div
+                  class="eval-report"
+                  id="eval-report"
+                  aria-label="Baseline evaluation report"
+                >Loading report…</div>
+                <h3 class="outputs-subh">Global SHAP (batch analysis)</h3>
+                <div class="output-fig-grid">
+                  <figure class="output-fig">
+                    <img
+                      src="../outputs/interpretability/shap_bar.png"
+                      alt="Bar chart of mean SHAP values by feature"
+                      loading="lazy"
+                    />
+                    <figcaption class="output-fig-cap">SHAP bar (global)</figcaption>
+                  </figure>
+                  <figure class="output-fig">
+                    <img
+                      src="../outputs/interpretability/shap_summary.png"
+                      alt="SHAP summary beeswarm"
+                      loading="lazy"
+                    />
+                    <figcaption class="output-fig-cap">SHAP summary (global)</figcaption>
+                  </figure>
+                </div>
+                <h3 class="outputs-subh">Baseline model comparison (training run)</h3>
+                <div class="output-fig-grid output-fig-grid-4">
+                  <figure class="output-fig">
+                    <img
+                      src="../baselines/outputs/plots/roc_curves.png"
+                      alt="ROC curves for baselines"
+                      loading="lazy"
+                    />
+                    <figcaption class="output-fig-cap">ROC</figcaption>
+                  </figure>
+                  <figure class="output-fig">
+                    <img
+                      src="../baselines/outputs/plots/metrics_comparison.png"
+                      alt="Metrics comparison"
+                      loading="lazy"
+                    />
+                    <figcaption class="output-fig-cap">Metrics</figcaption>
+                  </figure>
+                  <figure class="output-fig">
+                    <img
+                      src="../baselines/outputs/plots/feature_importance.png"
+                      alt="Random forest feature importance"
+                      loading="lazy"
+                    />
+                    <figcaption class="output-fig-cap">Feature importance</figcaption>
+                  </figure>
+                  <figure class="output-fig">
+                    <img
+                      src="../baselines/outputs/plots/precision_recall_curves.png"
+                      alt="Precision–recall curves"
+                      loading="lazy"
+                    />
+                    <figcaption class="output-fig-cap">Precision–recall</figcaption>
+                  </figure>
+                  <figure class="output-fig">
+                    <img
+                      src="../baselines/outputs/plots/confusion_matrices.png"
+                      alt="Confusion matrices for baselines"
+                      loading="lazy"
+                    />
+                    <figcaption class="output-fig-cap">Confusion matrices</figcaption>
+                  </figure>
+                </div>
+                <h3 class="outputs-subh">Aggregate risk map (pipeline PNG)</h3>
+                <div class="output-fig-grid">
+                  <figure class="output-fig output-fig-wide">
+                    <img
+                      src="../outputs/maps/risk_map_aggregate.png"
+                      alt="Aggregate risk map from pipeline"
+                      loading="lazy"
+                    />
+                    <figcaption class="output-fig-cap">risk_map_aggregate.png</figcaption>
+                  </figure>
+                </div>
+                <h3 class="outputs-subh">Saved maps for the selected date</h3>
+                <p class="outputs-hint">
+                  When the time scrubber or play matches a day that has PNGs in
+                  <code>outputs/maps/</code>, they appear here (independent of the
+                  live Leaflet map).
+                </p>
+                <div id="date-exports" class="date-exports" aria-live="polite"></div>
+              </div>
+            </details>
+          </section>
           <p class="link-note">
             Map: <strong>Leaflet</strong>. Analytics: <strong>D3</strong> (linked
-            views, axes, pointer interaction). Serve from repo root.
+            views, axes, pointer interaction). Also pulls
+            <code>evaluation_report.txt</code>, <code>outputs/maps/</code>, and
+            <code>outputs/interpretability/*.png</code> when present. Serve from
+            repo root.
           </p>
         </aside>
       </main>
