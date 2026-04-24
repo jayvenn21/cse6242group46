@@ -100,7 +100,7 @@ You need `baselines/outputs/model_results.csv` (and the usual `data/processed/` 
 ```bash
 python3 -m http.server 8000
 ```
-Then open **http://localhost:8000/frontend/index.html** in your browser. If you only want to poke at the UI without cloning, use the [live link](https://jayvenn21.github.io/cse6242group46/frontend/index.html) at the top of this README instead.
+Then open **http://localhost:8000/frontend/index.html** in your browser.
 
 ## The map app (Leaflet + D3)
 
