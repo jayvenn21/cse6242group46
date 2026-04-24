@@ -3,6 +3,9 @@ __pycache__/
 .DS_Store
 .venv/
 
+# Leftover from `npm run build` / Vercel (no longer in repo; safe to delete locally)
+public/
+
 data/raw/*
 !data/raw/.gitkeep
 

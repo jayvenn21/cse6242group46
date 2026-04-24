@@ -2,6 +2,8 @@
 
 This is Team 46’s CSE 6242 project pipeline: we take raw fire incidents, match them to daily weather, put everything on a fixed city grid, and end up with a table you can hand to baselines and models.
 
+**Live visualization (GitHub Pages):** [Fire risk explorer — interactive Atlanta grid map](https://jayvenn21.github.io/cse6242group46/frontend/index.html)
+
 ## Dataset assumptions
 
 - **Fire data:** FEMA NFIRS (or similar) — `.gpkg`, `.csv`, or `.parquet` with locations.
@@ -86,6 +88,8 @@ By default this lands in `data/processed/`:
 
 ## The map app (Leaflet + D3)
 
+**Hosted app:** **[https://jayvenn21.github.io/cse6242group46/frontend/index.html](https://jayvenn21.github.io/cse6242group46/frontend/index.html)**
+
 There’s a static site under `frontend/` that turns the model outputs into something you can **explore in time and space**—after you’ve run the baselines you get a live choropleth over Atlanta, not just another CSV.
 
 ### What you’re looking at
@@ -108,29 +112,23 @@ This GIF was recorded with `scripts/capture_frontend_media.py` (headless Chrome 
   <img src="./docs/images/map_timelapse.gif" width="600" height="350" alt="Fire risk map: choropleth updates as the date slider moves">
 </p>
 
-### Run it in a browser
-
-From the **repo root** (so paths like `../data/...` resolve the same as in class):
-
-```bash
-python3 -m http.server 8000
-```
-
-Then open **http://localhost:8000/frontend/index.html** in a normal tab. Browsers won’t load the data off `file://`, so a tiny local server is the usual trick.
-
-### Host the same app on GitHub (Pages)
+### Host the app on GitHub (Pages)
 
 You can. The map is all static files, and **GitHub Pages** can host them for free on a public repo. This repo includes a workflow (`.github/workflows/github-pages.yml`) that copies `frontend/`, the grid GeoJSON, `model_results.csv`, and `outputs/interpretability/` into a small deploy bundle and publishes it on every push to `main` or `master` (or when you run the workflow manually from the **Actions** tab).
 
 **One-time setup in the GitHub UI**
 
-1. Push the workflow to GitHub and merge to `main` (or your default branch that matches the workflow).
-2. In the repo: **Settings → Pages → Build and deployment → Source:** choose **GitHub Actions** (not “Deploy from a branch” unless you prefer that route).
-3. After the first successful run, your site will be at  
-   `https://<your-username-or-org>.github.io/<repo-name>/`  
-   (that root redirects to `frontend/index.html`).
+1. Merge or push the workflow to `main` (or `master`) so it runs at least once. It **creates/updates a `gh-pages` branch** with the static files (this does not use the “GitHub Actions” Pages API that often returns 404 for orgs or when Pages isn’t fully enabled).
+2. **Settings → Pages → Build and deployment → Source:** choose **Deploy from a branch**.
+3. **Branch:** `gh-pages`, **folder:** `/ (root)**, then **Save**.
 
-The relative URLs in `frontend/js/config.js` still work, because the deployed tree keeps `frontend/`, `data/`, `baselines/`, and `outputs/` next to each other the same way as on your laptop. If you update the model CSV or the grid, commit and push so the workflow ships a new build.
+After that, the site is at  
+`https://<your-username-or-org>.github.io/<repo-name>/`  
+(the root `index.html` redirects to `frontend/index.html`).
+
+The relative URLs in `frontend/js/config.js` work because the deployed tree keeps `frontend/`, `data/`, `baselines/`, and `outputs/` next to each other. If you update the model CSV or the grid, commit and push so the workflow updates `gh-pages`.
+
+**If you still see 404 in the browser:** wait a minute after the workflow turns green, hard-refresh, and confirm the Pages URL uses your **repo name** and (for a project site) the path is `/repo-name/`, not the org’s main user page unless that’s what you set up.
 
 **Private repositories:** free GitHub Pages for private repos has limits on who can use it; for class projects, a **public** repo is usually the path of least resistance. If you use a private repo, check GitHub’s current docs for Pages availability on your plan.
 
