@@ -178,23 +178,29 @@ def build():
     # ═══════════════════════════════════════════════════════════
     # LEFT COL: INTRODUCTION
     # ═══════════════════════════════════════════════════════════
-    sec_h = 4.6
+    sec_h = 5.8
     _box(slide, lx, Y0, cw, sec_h)
     by = _heading(slide, lx + pad, Y0 + pad, cw - 2*pad, "Introduction")
     _bullets(slide, lx + pad, by, cw - 2*pad, sec_h - 1.4, [
-        "Fire departments make readiness decisions under uncertainty,\n"
-        "yet incidents are not uniformly distributed across a city.",
+        "Fire departments make staffing and inspection decisions\n"
+        "under uncertainty, yet fire incidents cluster unevenly\n"
+        "across neighborhoods and time periods.",
         "Current tools show what happened \u2014 not where risk is\n"
-        "concentrated, how it changes, or why an area is flagged.",
-        "We built an end-to-end system that forecasts next-day fire\n"
-        "risk on a 1 km Atlanta grid and explains each prediction.",
+        "concentrated, how it shifts over time, or why a model\n"
+        "flags a particular area.",
+        "Better risk awareness helps departments pre-position\n"
+        "resources and prioritize inspections, potentially\n"
+        "reducing response times and preventing incidents.",
+        "We built an end-to-end system that forecasts next-day\n"
+        "fire risk on a 1 km Atlanta grid and explains each\n"
+        "prediction through an interactive dashboard.",
     ], size=22)
 
     # ═══════════════════════════════════════════════════════════
     # LEFT COL: DATA
     # ═══════════════════════════════════════════════════════════
     y2 = Y0 + sec_h + GAP
-    sec_h2 = 4.4
+    sec_h2 = 4.2
     _box(slide, lx, y2, cw, sec_h2)
     by = _heading(slide, lx + pad, y2 + pad, cw - 2*pad, "Data")
     _bullets(slide, lx + pad, by, cw - 2*pad, sec_h2 - 1.4, [
@@ -210,7 +216,7 @@ def build():
     # LEFT COL: METHODS
     # ═══════════════════════════════════════════════════════════
     y3 = y2 + sec_h2 + GAP
-    sec_h3 = 7.2
+    sec_h3 = 8.2
     _box(slide, lx, y3, cw, sec_h3)
     by = _heading(slide, lx + pad, y3 + pad, cw - 2*pad, "Methods")
     _bullets(slide, lx + pad, by, cw - 2*pad, sec_h3 - 1.4, [
@@ -219,9 +225,14 @@ def build():
         "ARIMA baseline: per-cell time-series for top 50 cells.\n"
         "Grid search (p,d,q) by AIC; fallback for sparse cells.",
         "Random Forest (main model): 300 trees, max depth 15,\n"
-        "balanced weights. Uses all 14 features + encoded grid_id.",
+        "balanced weights. Uses all 14 features + encoded grid_id.\n"
+        "Combines weather, calendar, history, and location signals\n"
+        "that simpler baselines ignore individually.",
         "Temporal 80/20 split: train Jan\u2013Oct 18, test Oct 19\u2013Dec 30.\n"
         "No row shuffling to prevent future-data leakage.",
+        "Key novelty: most prior systems provide either forecasting\n"
+        "or explanation. Ours combines short-horizon prediction,\n"
+        "SHAP explanation, and interactive exploration in one tool.",
     ], size=22)
 
     # ═══════════════════════════════════════════════════════════
