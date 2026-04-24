@@ -13,293 +13,344 @@ from pptx.enum.shapes import MSO_SHAPE
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(REPO, "docs", "team046poster.pptx")
 
-W, H = Inches(30), Inches(40)
+W_IN, H_IN = 30, 40
+W, H = Inches(W_IN), Inches(H_IN)
 
-# colors
-BANNER_BG = RGBColor(0xC0, 0x39, 0x2B)
-HEADING_COLOR = RGBColor(0xC0, 0x39, 0x2B)
-WHITE = RGBColor(0xFF, 0xFF, 0xFF)
-BLACK = RGBColor(0x22, 0x22, 0x22)
-DARK_GRAY = RGBColor(0x44, 0x44, 0x44)
-LIGHT_BG = RGBColor(0xF8, 0xF8, 0xF8)
+# palette
+CRIMSON     = RGBColor(0xB7, 0x1C, 0x1C)
+DARK_RED    = RGBColor(0x8B, 0x0A, 0x0A)
+WHITE       = RGBColor(0xFF, 0xFF, 0xFF)
+OFF_WHITE   = RGBColor(0xFA, 0xFA, 0xFA)
+NEAR_BLACK  = RGBColor(0x1A, 0x1A, 0x1A)
+BODY_TEXT   = RGBColor(0x2D, 0x2D, 0x2D)
+CAPTION_CLR = RGBColor(0x66, 0x66, 0x66)
+SECTION_BG  = RGBColor(0xF5, 0xF5, 0xF5)
+ACCENT_LINE = RGBColor(0xCC, 0x33, 0x33)
 
-COL_LEFT = Inches(0.6)
-COL_RIGHT = Inches(15.5)
-COL_W = Inches(13.8)
-MARGIN = Inches(0.6)
+MARGIN = 0.5
+GAP = 0.35
+COL_GAP = 0.4
+COL_W = (W_IN - 2 * MARGIN - COL_GAP) / 2  # ~14.55 each
+LEFT_X = MARGIN
+RIGHT_X = MARGIN + COL_W + COL_GAP
+INNER_PAD = 0.35
 
 
-def add_rect(slide, left, top, width, height, fill):
-    shape = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, top, width, height)
+def _box(slide, x, y, w, h, fill=SECTION_BG):
+    shape = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, 
+                                    Inches(x), Inches(y), Inches(w), Inches(h))
+    shape.fill.solid()
+    shape.fill.fore_color.rgb = fill
+    shape.line.color.rgb = RGBColor(0xE0, 0xE0, 0xE0)
+    shape.line.width = Pt(1)
+    shape.adjustments[0] = 0.02
+    return shape
+
+
+def _rect(slide, x, y, w, h, fill):
+    shape = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE,
+                                    Inches(x), Inches(y), Inches(w), Inches(h))
     shape.fill.solid()
     shape.fill.fore_color.rgb = fill
     shape.line.fill.background()
     return shape
 
 
-def add_textbox(slide, left, top, width, height):
-    return slide.shapes.add_textbox(left, top, width, height)
+def _tb(slide, x, y, w, h):
+    return slide.shapes.add_textbox(Inches(x), Inches(y), Inches(w), Inches(h))
 
 
-def set_text(tf, text, size=20, bold=False, color=BLACK, align=PP_ALIGN.LEFT):
+def _heading(slide, x, y, w, text):
+    # accent bar
+    _rect(slide, x, y, 0.12, 0.5, CRIMSON)
+    tb = _tb(slide, x + 0.22, y, w - 0.22, 0.55)
+    tf = tb.text_frame
     tf.word_wrap = True
     p = tf.paragraphs[0]
-    p.text = text
-    p.font.size = Pt(size)
-    p.font.bold = bold
-    p.font.color.rgb = color
-    p.alignment = align
-    return p
+    p.text = text.upper()
+    p.font.size = Pt(32)
+    p.font.bold = True
+    p.font.color.rgb = CRIMSON
+    p.font.name = "Calibri"
+    return y + 0.65
 
 
-def add_paragraph(tf, text, size=20, bold=False, color=BLACK, space_before=Pt(4)):
-    p = tf.add_paragraph()
-    p.text = text
-    p.font.size = Pt(size)
-    p.font.bold = bold
-    p.font.color.rgb = color
-    p.space_before = space_before
-    return p
-
-
-def add_heading(slide, left, top, width, text):
-    tb = add_textbox(slide, left, top, width, Inches(0.55))
-    set_text(tb.text_frame, text, size=28, bold=True, color=HEADING_COLOR)
-    # underline bar
-    add_rect(slide, left, top + Inches(0.5), width, Inches(0.04), HEADING_COLOR)
-    return top + Inches(0.6)
-
-
-def add_bullets(slide, left, top, width, height, items, size=20):
-    tb = add_textbox(slide, left, top, width, height)
+def _bullets(slide, x, y, w, h, items, size=22):
+    tb = _tb(slide, x, y, w, h)
     tf = tb.text_frame
     tf.word_wrap = True
     for i, item in enumerate(items):
         if i == 0:
-            set_text(tf, f"\u2022  {item}", size=size, color=DARK_GRAY)
+            p = tf.paragraphs[0]
         else:
-            add_paragraph(tf, f"\u2022  {item}", size=size, color=DARK_GRAY,
-                          space_before=Pt(8))
-    return tb
+            p = tf.add_paragraph()
+            p.space_before = Pt(10)
+        p.text = f"\u2022   {item}"
+        p.font.size = Pt(size)
+        p.font.color.rgb = BODY_TEXT
+        p.font.name = "Calibri"
+        p.line_spacing = Pt(size + 8)
 
 
-def add_image(slide, path, left, top, width=None, height=None):
-    full = os.path.join(REPO, path)
+def _caption(slide, x, y, w, text):
+    tb = _tb(slide, x, y, w, 0.4)
+    tf = tb.text_frame
+    tf.word_wrap = True
+    p = tf.paragraphs[0]
+    p.text = text
+    p.font.size = Pt(16)
+    p.font.color.rgb = CAPTION_CLR
+    p.font.name = "Calibri"
+    p.font.italic = True
+    p.alignment = PP_ALIGN.CENTER
+
+
+def _img(slide, rel_path, x, y, width=None, height=None):
+    full = os.path.join(REPO, rel_path)
     if not os.path.exists(full):
         print(f"  [warn] missing: {full}")
         return None
-    kwargs = {"left": left, "top": top}
+    kw = {"left": Inches(x), "top": Inches(y)}
     if width:
-        kwargs["width"] = width
+        kw["width"] = Inches(width)
     if height:
-        kwargs["height"] = height
-    return slide.shapes.add_picture(full, **kwargs)
+        kw["height"] = Inches(height)
+    return slide.shapes.add_picture(full, **kw)
 
 
 def build():
     prs = Presentation()
     prs.slide_width = W
     prs.slide_height = H
-    slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
 
-    # ── title banner ──────────────────────────────────────────────
-    add_rect(slide, 0, 0, W, Inches(3.2), BANNER_BG)
+    bg = slide.background
+    bg.fill.solid()
+    bg.fill.fore_color.rgb = WHITE
 
-    tb = add_textbox(slide, Inches(0.8), Inches(0.5), Inches(28.4), Inches(1.4))
-    set_text(tb.text_frame,
-             "Ignition Insights: Explaining and Forecasting Urban Fire Risk",
-             size=52, bold=True, color=WHITE, align=PP_ALIGN.CENTER)
+    # ═══════════════════════════════════════════════════════════
+    # TITLE BANNER
+    # ═══════════════════════════════════════════════════════════
+    _rect(slide, 0, 0, W_IN, 3.4, CRIMSON)
+    _rect(slide, 0, 3.2, W_IN, 0.2, DARK_RED)
 
-    tb = add_textbox(slide, Inches(0.8), Inches(2.0), Inches(28.4), Inches(0.6))
-    set_text(tb.text_frame,
-             "Team 46:  Vishruth Anand  |  Vineeth Nareddy  |  Rian Rahman  |  James Reilly  |  Jayanth Vennamreddy",
-             size=26, bold=False, color=WHITE, align=PP_ALIGN.CENTER)
-
-    tb = add_textbox(slide, Inches(0.8), Inches(2.55), Inches(28.4), Inches(0.5))
-    set_text(tb.text_frame,
-             "Georgia Institute of Technology  \u2014  CSE 6242 Data and Visual Analytics",
-             size=22, bold=False, color=RGBColor(0xFF, 0xCC, 0xCC), align=PP_ALIGN.CENTER)
-
-    y_start = Inches(3.6)
-
-    # ══════════════════════════════════════════════════════════════
-    # LEFT COLUMN
-    # ══════════════════════════════════════════════════════════════
-
-    # 1. INTRODUCTION / MOTIVATION
-    y = add_heading(slide, COL_LEFT, y_start, COL_W, "Introduction")
-    add_bullets(slide, COL_LEFT, y, COL_W, Inches(3.0), [
-        "Fire departments make staffing and readiness decisions under uncertainty, "
-        "yet fire incidents are not uniformly distributed across a city.",
-        "Existing tools show what happened but not where risk is concentrated, "
-        "how it changes over time, or why a model flags a particular area.",
-        "We built an end-to-end system that forecasts short-horizon fire risk "
-        "across a 1 km grid of Atlanta and explains each prediction.",
-        "The goal is relative risk ranking and explanation, not perfect "
-        "prediction of individual fires (0.5% positive rate).",
-    ])
-
-    # 2. DATA
-    y = add_heading(slide, COL_LEFT, y_start + Inches(3.8), COL_W, "Data")
-    add_bullets(slide, COL_LEFT, y, COL_W, Inches(2.8), [
-        "Incidents: 1,473 geocoded fire incidents from 2024 NFIRS PDR Light "
-        "(FEMA ArcGIS FeatureServer), filtered to Atlanta, fire codes 100\u2013199.",
-        "Weather: Open-Meteo daily archive for Atlanta \u2014 temperature, "
-        "humidity, precipitation, wind speed. One row per day, merged citywide.",
-        "Grid: 1,176 cells at 1,000 m resolution over the Atlanta metro extent. "
-        "364 cells have at least one fire incident in the study period.",
-        "Model table: 132,860 cell-day rows with 18 features including "
-        "weather, calendar, lags (1/3/7 day), and rolling sums (7/14 day).",
-    ])
-
-    # 3. METHODS
-    y = add_heading(slide, COL_LEFT, y_start + Inches(7.4), COL_W, "Methods")
-    add_bullets(slide, COL_LEFT, y, COL_W, Inches(4.6), [
-        "Preprocessing: infer columns, standardize timestamps, project to UTM, "
-        "assign grid cells, build full (cell \u00d7 date) panel with lagged features.",
-        "Hotspot baseline: 2D Gaussian KDE over training cell centroids "
-        "weighted by incident count. Captures static spatial density.",
-        "ARIMA baseline: per-cell time-series model for up to 50 most active "
-        "cells (min 5 nonzero days). Grid search over (p,d,q) by AIC.",
-        "Random Forest: 300 trees, max depth 15, balanced class weights. "
-        "Uses all 14 features including encoded grid_id for cell-level effects.",
-        "Temporal split: first 80% of dates for training (Jan\u2013Oct), "
-        "last 20% for testing (Oct 19\u2013Dec 30). No row shuffling.",
-    ])
-
-    # risk heatmap figure
-    add_image(slide, "outputs/maps/risk_map_aggregate.png",
-              COL_LEFT + Inches(1.5), y_start + Inches(12.5), width=Inches(10.5))
-
-    # label under heatmap
-    tb = add_textbox(slide, COL_LEFT, y_start + Inches(23.6), COL_W, Inches(0.5))
-    set_text(tb.text_frame,
-             "Figure 1: Aggregate RF risk heatmap across all test dates (Atlanta 1 km grid)",
-             size=18, bold=False, color=DARK_GRAY, align=PP_ALIGN.CENTER)
-
-    # 4. INTERACTIVE DASHBOARD
-    y = add_heading(slide, COL_LEFT, y_start + Inches(24.5), COL_W,
-                    "Interactive Dashboard")
-    add_bullets(slide, COL_LEFT, y, COL_W, Inches(2.8), [
-        "Leaflet basemap + D3 analytical views in a single-page web app.",
-        "Metric dropdown: RF probability, hotspot, ARIMA, incident count, target.",
-        "Date slider with play/pause animates through 73 test dates; all views update together.",
-        "Click a cell to see: score histogram, probability time series, "
-        "feature snapshot, and SHAP explanation with driver bar chart.",
-    ])
-
-    # dashboard screenshot
-    add_image(slide, "outputs/frontend-captures/app_full.png",
-              COL_LEFT + Inches(0.5), y_start + Inches(28.0), width=Inches(12.8))
-
-    # caption
-    tb = add_textbox(slide, COL_LEFT, y_start + Inches(35.4), COL_W, Inches(0.5))
-    set_text(tb.text_frame,
-             "Figure 2: Dashboard with choropleth map, time slider, histogram, "
-             "and SHAP explanation panel",
-             size=18, bold=False, color=DARK_GRAY, align=PP_ALIGN.CENTER)
-
-    # ══════════════════════════════════════════════════════════════
-    # RIGHT COLUMN
-    # ══════════════════════════════════════════════════════════════
-
-    # 5. RESULTS
-    y = add_heading(slide, COL_RIGHT, y_start, COL_W, "Results")
-    add_bullets(slide, COL_RIGHT, y, COL_W, Inches(4.2), [
-        "Test set: 26,572 cell-date observations, 138 positive (0.52%). "
-        "Extreme imbalance makes accuracy misleading (all models > 98%).",
-        "Random Forest achieves the best ranking: ROC-AUC 0.65, PR-AUC 0.014 "
-        "(\u22483\u00d7 better than random at this positive rate).",
-        "Hotspot baseline captures some positives (recall 7.25%) but has "
-        "low precision (2.74%). ARIMA improves ranking slightly (ROC-AUC 0.59).",
-        "RF threshold yields 0 true positives, but the probability surface "
-        "is more informative \u2014 we use it as a continuous risk map, not an alarm.",
-    ])
-
-    # metrics comparison figure
-    add_image(slide, "baselines/outputs/plots/metrics_comparison.png",
-              COL_RIGHT + Inches(0.3), y_start + Inches(4.8), width=Inches(12.8))
-
-    # caption
-    tb = add_textbox(slide, COL_RIGHT, y_start + Inches(12.0), COL_W, Inches(0.5))
-    set_text(tb.text_frame,
-             "Figure 3: Model comparison \u2014 key evaluation metrics",
-             size=18, bold=False, color=DARK_GRAY, align=PP_ALIGN.CENTER)
-
-    # ROC curves
-    add_image(slide, "baselines/outputs/plots/roc_curves.png",
-              COL_RIGHT + Inches(1.5), y_start + Inches(12.8), width=Inches(10.5))
-
-    # caption
-    tb = add_textbox(slide, COL_RIGHT, y_start + Inches(21.8), COL_W, Inches(0.5))
-    set_text(tb.text_frame,
-             "Figure 4: ROC curves for all three baseline models",
-             size=18, bold=False, color=DARK_GRAY, align=PP_ALIGN.CENTER)
-
-    # 6. INTERPRETABILITY
-    y = add_heading(slide, COL_RIGHT, y_start + Inches(22.5), COL_W,
-                    "Interpretability")
-    add_bullets(slide, COL_RIGHT, y, COL_W, Inches(2.2), [
-        "SHAP TreeExplainer on the RF model generates per-feature "
-        "contributions for each cell-date prediction.",
-        "Top drivers for high-risk cells: rolling_sum_14, rolling_sum_7 "
-        "(recent local activity), followed by month, wind, and grid location.",
-        "Narrative explanations are generated and displayed in the dashboard "
-        "for every high-probability cell-date.",
-    ])
-
-    # SHAP figure
-    add_image(slide, "outputs/interpretability/shap_bar.png",
-              COL_RIGHT + Inches(2.0), y_start + Inches(25.5), width=Inches(9.5))
-
-    # caption
-    tb = add_textbox(slide, COL_RIGHT, y_start + Inches(33.4), COL_W, Inches(0.5))
-    set_text(tb.text_frame,
-             "Figure 5: SHAP feature importance (mean |SHAP value|)",
-             size=18, bold=False, color=DARK_GRAY, align=PP_ALIGN.CENTER)
-
-    # 7. CONCLUSIONS
-    y = add_heading(slide, COL_RIGHT, y_start + Inches(34.2), COL_W, "Conclusions")
-    add_bullets(slide, COL_RIGHT, y, COL_W, Inches(2.0), [
-        "At 0.5% positive rate, binary metrics are insufficient \u2014 "
-        "ranked risk surfaces are more useful than yes/no alarms.",
-        "Linked views (map + timeline + histogram + explanation) make model "
-        "outputs easier to understand and critique than static heatmaps.",
-        "Future work: add census/land-use features, improve threshold "
-        "calibration, try gradient boosting, conduct a formal user study.",
-    ], size=19)
-
-    # REFERENCES
-    tb = add_textbox(slide, COL_RIGHT, y_start + Inches(36.0), COL_W, Inches(0.4))
-    set_text(tb.text_frame, "References", size=22, bold=True, color=HEADING_COLOR)
-
-    refs = (
-        "[1] Wang et al., CityGuard, ACM IMWUT 2019.  "
-        "[2] Coffield et al., Fire size prediction, IJWF 2019.  "
-        "[3] Lattimer et al., ML in fire simulation, FSJ 2020.  "
-        "[4] Asgary et al., Toronto fire clustering, 2010.  "
-        "[5] Yuan & Wylie, ARIMA vs RF for Austin fires, 2024.  "
-        "[6] Madaio et al., Firebird Atlanta, 2016.  "
-        "[7] Jin et al., Deep sequence fire forecasting, ASC 2020.  "
-        "[8] Ahn et al., Stacking ensemble fire risk, Fire 2024.  "
-        "[9] Zhang et al., Firefighter demand prediction, FSJ 2024.  "
-        "[10] Ku et al., GIS fire drivers, 2024.  "
-        "[11] Cui et al., Ensemble fire risk, IJDRR 2024.  "
-        "[12] Liao et al., Residential fire factors, 2024.  "
-        "[13] Kang et al., GIS+ML fire risk, Sustainability 2018.  "
-        "[14] Xiao et al., Spatial fire hazard, AAP 2018.  "
-        "[15] Jennings, Socioeconomic fire risk, FSJ 2013."
-    )
-    tb = add_textbox(slide, COL_RIGHT, y_start + Inches(36.4), COL_W, Inches(0.8))
+    tb = _tb(slide, 1, 0.45, W_IN - 2, 1.3)
     tf = tb.text_frame
-    tf.word_wrap = True
-    set_text(tf, refs, size=14, color=DARK_GRAY)
+    p = tf.paragraphs[0]
+    p.text = "Ignition Insights"
+    p.font.size = Pt(60)
+    p.font.bold = True
+    p.font.color.rgb = WHITE
+    p.font.name = "Calibri"
+    p.alignment = PP_ALIGN.CENTER
 
-    # ── save ──────────────────────────────────────────────────────
+    tb = _tb(slide, 1, 1.6, W_IN - 2, 0.7)
+    tf = tb.text_frame
+    p = tf.paragraphs[0]
+    p.text = "Explaining and Forecasting Urban Fire Risk"
+    p.font.size = Pt(36)
+    p.font.bold = False
+    p.font.color.rgb = RGBColor(0xFF, 0xDD, 0xDD)
+    p.font.name = "Calibri"
+    p.alignment = PP_ALIGN.CENTER
+
+    tb = _tb(slide, 1, 2.35, W_IN - 2, 0.7)
+    tf = tb.text_frame
+    p = tf.paragraphs[0]
+    p.text = "Vishruth Anand   \u00b7   Vineeth Nareddy   \u00b7   Rian Rahman   \u00b7   James Reilly   \u00b7   Jayanth Vennamreddy"
+    p.font.size = Pt(24)
+    p.font.color.rgb = WHITE
+    p.font.name = "Calibri"
+    p.alignment = PP_ALIGN.CENTER
+    p2 = tf.add_paragraph()
+    p2.text = "Georgia Institute of Technology  \u2014  CSE 6242 Data and Visual Analytics  \u2014  Team 46"
+    p2.font.size = Pt(20)
+    p2.font.color.rgb = RGBColor(0xFF, 0xBB, 0xBB)
+    p2.font.name = "Calibri"
+    p2.alignment = PP_ALIGN.CENTER
+
+    Y0 = 3.8
+    pad = INNER_PAD
+    lx = LEFT_X
+    rx = RIGHT_X
+    cw = COL_W
+
+    # ═══════════════════════════════════════════════════════════
+    # LEFT COL: INTRODUCTION
+    # ═══════════════════════════════════════════════════════════
+    sec_h = 4.6
+    _box(slide, lx, Y0, cw, sec_h)
+    by = _heading(slide, lx + pad, Y0 + pad, cw - 2*pad, "Introduction")
+    _bullets(slide, lx + pad, by, cw - 2*pad, sec_h - 1.4, [
+        "Fire departments make readiness decisions under uncertainty,\n"
+        "yet incidents are not uniformly distributed across a city.",
+        "Current tools show what happened \u2014 not where risk is\n"
+        "concentrated, how it changes, or why an area is flagged.",
+        "We built an end-to-end system that forecasts next-day fire\n"
+        "risk on a 1 km Atlanta grid and explains each prediction.",
+    ], size=22)
+
+    # ═══════════════════════════════════════════════════════════
+    # LEFT COL: DATA
+    # ═══════════════════════════════════════════════════════════
+    y2 = Y0 + sec_h + GAP
+    sec_h2 = 4.4
+    _box(slide, lx, y2, cw, sec_h2)
+    by = _heading(slide, lx + pad, y2 + pad, cw - 2*pad, "Data")
+    _bullets(slide, lx + pad, by, cw - 2*pad, sec_h2 - 1.4, [
+        "1,473 geocoded fire incidents from 2024 NFIRS PDR Light\n"
+        "(Atlanta, fire codes 100\u2013199, deduplicated).",
+        "Daily weather from Open-Meteo: temperature, humidity,\n"
+        "precipitation, wind speed (citywide, one row per day).",
+        "1,176 grid cells at 1 km resolution; 132,860 cell-day rows\n"
+        "with 18 features (weather, calendar, lags, rolling sums).",
+    ], size=22)
+
+    # ═══════════════════════════════════════════════════════════
+    # LEFT COL: METHODS
+    # ═══════════════════════════════════════════════════════════
+    y3 = y2 + sec_h2 + GAP
+    sec_h3 = 7.2
+    _box(slide, lx, y3, cw, sec_h3)
+    by = _heading(slide, lx + pad, y3 + pad, cw - 2*pad, "Methods")
+    _bullets(slide, lx + pad, by, cw - 2*pad, sec_h3 - 1.4, [
+        "Hotspot baseline: Gaussian KDE over training centroids\n"
+        "weighted by count. Captures static spatial density only.",
+        "ARIMA baseline: per-cell time-series for top 50 cells.\n"
+        "Grid search (p,d,q) by AIC; fallback for sparse cells.",
+        "Random Forest (main model): 300 trees, max depth 15,\n"
+        "balanced weights. Uses all 14 features + encoded grid_id.",
+        "Temporal 80/20 split: train Jan\u2013Oct 18, test Oct 19\u2013Dec 30.\n"
+        "No row shuffling to prevent future-data leakage.",
+    ], size=22)
+
+    # ═══════════════════════════════════════════════════════════
+    # LEFT COL: RISK HEATMAP
+    # ═══════════════════════════════════════════════════════════
+    y4 = y3 + sec_h3 + GAP
+    fig_h = 8.5
+    _box(slide, lx, y4, cw, fig_h + 1.0)
+    _img(slide, "outputs/maps/risk_map_aggregate.png",
+         lx + (cw - 8.0) / 2, y4 + 0.3, width=8.0)
+    _caption(slide, lx + pad, y4 + fig_h + 0.15, cw - 2*pad,
+             "Fig. 1: Aggregate RF risk across all test dates (Atlanta 1 km grid)")
+
+    # ═══════════════════════════════════════════════════════════
+    # LEFT COL: DASHBOARD
+    # ═══════════════════════════════════════════════════════════
+    y5 = y4 + fig_h + 1.0 + GAP
+    sec_h5 = H_IN - MARGIN - y5
+    _box(slide, lx, y5, cw, sec_h5)
+    by = _heading(slide, lx + pad, y5 + pad, cw - 2*pad, "Interactive Dashboard")
+    _bullets(slide, lx + pad, by, cw - 2*pad, 3.0, [
+        "Leaflet map + D3 analytics. Metric selector, date slider\n"
+        "with play/pause, linked histogram and time-series views.",
+        "Click any cell: feature snapshot, SHAP explanation panel\n"
+        "with driver bar chart and narrative sentence.",
+    ], size=22)
+    _img(slide, "outputs/frontend-captures/app_full.png",
+         lx + (cw - 12.5) / 2, by + 3.2, width=12.5)
+    _caption(slide, lx + pad, by + 3.2 + 7.8, cw - 2*pad,
+             "Fig. 2: Dashboard with choropleth, time control, and explanation panel")
+
+    # ═══════════════════════════════════════════════════════════
+    # RIGHT COL: RESULTS
+    # ═══════════════════════════════════════════════════════════
+    _box(slide, rx, Y0, cw, 4.6)
+    by = _heading(slide, rx + pad, Y0 + pad, cw - 2*pad, "Results")
+    _bullets(slide, rx + pad, by, cw - 2*pad, 3.6, [
+        "Test set: 26,572 cell-days, only 138 positive (0.52%).\n"
+        "Extreme imbalance makes accuracy misleading (all > 98%).",
+        "RF achieves the best ranking: ROC-AUC 0.65, PR-AUC 0.014\n"
+        "(\u22483\u00d7 better than random at this positive rate).",
+        "RF threshold gives 0 true positives, but the continuous\n"
+        "probability surface is more useful as a risk map.",
+    ], size=22)
+
+    # ═══════════════════════════════════════════════════════════
+    # RIGHT COL: METRICS FIGURE
+    # ═══════════════════════════════════════════════════════════
+    ry2 = Y0 + 4.6 + GAP
+    _box(slide, rx, ry2, cw, 7.0)
+    _img(slide, "baselines/outputs/plots/metrics_comparison.png",
+         rx + (cw - 12.0) / 2, ry2 + 0.3, width=12.0)
+    _caption(slide, rx + pad, ry2 + 6.2, cw - 2*pad,
+             "Fig. 3: Model comparison across key evaluation metrics")
+
+    # ═══════════════════════════════════════════════════════════
+    # RIGHT COL: ROC FIGURE
+    # ═══════════════════════════════════════════════════════════
+    ry3 = ry2 + 7.0 + GAP
+    _box(slide, rx, ry3, cw, 8.6)
+    _img(slide, "baselines/outputs/plots/roc_curves.png",
+         rx + (cw - 9.5) / 2, ry3 + 0.3, width=9.5)
+    _caption(slide, rx + pad, ry3 + 7.9, cw - 2*pad,
+             "Fig. 4: ROC curves for all three baseline models")
+
+    # ═══════════════════════════════════════════════════════════
+    # RIGHT COL: INTERPRETABILITY + SHAP
+    # ═══════════════════════════════════════════════════════════
+    ry4 = ry3 + 8.6 + GAP
+    sec_h_interp = 10.0
+    _box(slide, rx, ry4, cw, sec_h_interp)
+    by = _heading(slide, rx + pad, ry4 + pad, cw - 2*pad, "Interpretability")
+    _bullets(slide, rx + pad, by, cw - 2*pad, 2.0, [
+        "SHAP TreeExplainer on the RF model: per-feature\n"
+        "contributions for every cell-date prediction.",
+        "Top drivers: rolling_sum_14, rolling_sum_7 (recent activity),\n"
+        "then month, wind, and grid location.",
+    ], size=22)
+    _img(slide, "outputs/interpretability/shap_bar.png",
+         rx + (cw - 9.0) / 2, by + 2.3, width=9.0)
+    _caption(slide, rx + pad, by + 2.3 + 7.0, cw - 2*pad,
+             "Fig. 5: SHAP feature importance (mean |SHAP value|)")
+
+    # ═══════════════════════════════════════════════════════════
+    # RIGHT COL: CONCLUSIONS
+    # ═══════════════════════════════════════════════════════════
+    ry5 = ry4 + sec_h_interp + GAP
+    sec_h_conc = 3.8
+    _box(slide, rx, ry5, cw, sec_h_conc)
+    by = _heading(slide, rx + pad, ry5 + pad, cw - 2*pad, "Conclusions")
+    _bullets(slide, rx + pad, by, cw - 2*pad, sec_h_conc - 1.2, [
+        "Binary metrics are insufficient at 0.5% positive rate \u2014\n"
+        "ranked risk surfaces are more practical than alarms.",
+        "Linked views (map + timeline + histogram + explanation)\n"
+        "make model outputs easier to understand and critique.",
+        "Future: census/land-use features, calibrated thresholds,\n"
+        "gradient boosting, and a formal user study.",
+    ], size=22)
+
+    # ═══════════════════════════════════════════════════════════
+    # RIGHT COL: REFERENCES
+    # ═══════════════════════════════════════════════════════════
+    ry6 = ry5 + sec_h_conc + GAP
+    remaining = H_IN - MARGIN - ry6
+    _box(slide, rx, ry6, cw, remaining)
+    by = _heading(slide, rx + pad, ry6 + pad, cw - 2*pad, "References")
+    refs = [
+        "[1] Wang et al., CityGuard, IMWUT 2019",
+        "[2] Coffield et al., Fire size ML, IJWF 2019",
+        "[3] Lattimer et al., ML fire simulation, FSJ 2020",
+        "[4] Asgary et al., Toronto fire clustering, 2010",
+        "[5] Yuan & Wylie, ARIMA vs RF, Austin 2024",
+        "[6] Madaio et al., Firebird Atlanta, 2016",
+        "[7] Jin et al., Deep sequence fire, ASC 2020",
+        "[8] Ahn et al., Stacking ensemble, Fire 2024",
+        "[9\u201315] Zhang, Ku, Cui, Liao, Kang, Xiao, Jennings",
+    ]
+    _bullets(slide, rx + pad, by, cw - 2*pad, remaining - 1.0, refs, size=16)
+
+    # ═══════════════════════════════════════════════════════════
+    # FOOTER BAR
+    # ═══════════════════════════════════════════════════════════
+    _rect(slide, 0, H_IN - 0.18, W_IN, 0.18, CRIMSON)
+
+    # save
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     prs.save(OUT)
     print(f"Saved poster to {OUT}")
-    print(f"  Slide size: {prs.slide_width / 914400:.0f} x {prs.slide_height / 914400:.0f} inches")
+    print(f"  Size: {W_IN} x {H_IN} inches")
 
 
 if __name__ == "__main__":
