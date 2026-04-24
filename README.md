@@ -90,7 +90,7 @@ By default this lands in `data/processed/`:
 
 **Hosted app:** **[https://jayvenn21.github.io/cse6242group46/frontend/index.html](https://jayvenn21.github.io/cse6242group46/frontend/index.html)**
 
-There’s a static site under `frontend/` that turns the model outputs into something you can **explore in time and space**—after you’ve run the baselines you get a live choropleth over Atlanta, not just another CSV.
+There’s a static site under `frontend/` that turns the model outputs into something you can **explore in time and space**.
 
 ### What you’re looking at
 
@@ -102,54 +102,13 @@ The **time control** at the top is a date index (not a free calendar): it steps 
 
 **Hover** a cell to see its id and the current metric value in the status strip; **click** a cell to “latch” it. The right-hand column then shows (1) a **histogram** of the chosen metric over all cells with data on that day, (2) a **small-multiple line chart** of the three model probability tracks for *that cell* across *all* dates in the CSV, and (3) a **read-only table** of key fields for that cell on the selected day. If you generated `explanations.csv`, you also get a short **narrative** and a **horizontal bar chart of top SHAP drivers** for that cell–date when a row exists. **Clicking a point** on the time-series chart jumps the global date scrubber to the nearest modeled day so the map and table stay in sync—that’s the main “linked view” gesture besides the slider.
 
-Technically, **Leaflet** owns the map and tiles; **D3** builds the scales, paths, axes, brushes, and text for the charts and legend. No bundler—ES modules in `frontend/js/`, D3 7 and Leaflet from CDNs.
-
 ### Quick preview
 
-This GIF was recorded with `scripts/capture_frontend_media.py` (headless Chrome via Playwright). It’s the choropleth stepping through a few model dates with the time slider.
+This GIF was recorded with `scripts/capture_frontend_media.py`. It’s the choropleth stepping through a few model dates with the time slider.
 
 <p align="center">
   <img src="./docs/images/map_timelapse.gif" width="600" height="350" alt="Fire risk map: choropleth updates as the date slider moves">
 </p>
-
-### Host the app on GitHub (Pages)
-
-You can. The map is all static files, and **GitHub Pages** can host them for free on a public repo. This repo includes a workflow (`.github/workflows/github-pages.yml`) that copies `frontend/`, the grid GeoJSON, `model_results.csv`, and `outputs/interpretability/` into a small deploy bundle and publishes it on every push to `main` or `master` (or when you run the workflow manually from the **Actions** tab).
-
-**One-time setup in the GitHub UI**
-
-1. Merge or push the workflow to `main` (or `master`) so it runs at least once. It **creates/updates a `gh-pages` branch** with the static files (this does not use the “GitHub Actions” Pages API that often returns 404 for orgs or when Pages isn’t fully enabled).
-2. **Settings → Pages → Build and deployment → Source:** choose **Deploy from a branch**.
-3. **Branch:** `gh-pages`, **folder:** `/ (root)**, then **Save**.
-
-After that, the site is at  
-`https://<your-username-or-org>.github.io/<repo-name>/`  
-(the root `index.html` redirects to `frontend/index.html`).
-
-The relative URLs in `frontend/js/config.js` work because the deployed tree keeps `frontend/`, `data/`, `baselines/`, and `outputs/` next to each other. If you update the model CSV or the grid, commit and push so the workflow updates `gh-pages`.
-
-**If you still see 404 in the browser:** wait a minute after the workflow turns green, hard-refresh, and confirm the Pages URL uses your **repo name** and (for a project site) the path is `/repo-name/`, not the org’s main user page unless that’s what you set up.
-
-**Private repositories:** free GitHub Pages for private repos has limits on who can use it; for class projects, a **public** repo is usually the path of least resistance. If you use a private repo, check GitHub’s current docs for Pages availability on your plan.
-
-## Updating the GIF in this README
-
-If you change the model output or the UI, you can re-record the clip:
-
-```bash
-python3 -m venv .venv
-. .venv/bin/activate
-python3 -m pip install -r requirements.txt
-python -m playwright install chromium
-python3 scripts/capture_frontend_media.py
-# writes outputs/frontend-captures/{map_overview.png,app_full.png,map_timelapse.gif}
-```
-
-Or, with a venv already set up, `make frontend-captures`. Handy flags: `--no-gif`, `--gif-frames 10`, `--gif-ms 500`, `--viewport 1600x1000`. When you’re happy with it, copy the new animation over the one GitHub shows:
-
-`cp outputs/frontend-captures/map_timelapse.gif docs/images/map_timelapse.gif` and commit.
-
-The script also writes `map_overview.png` and `app_full.png` under `outputs/frontend-captures/`. That folder is **not** gitignored—you can add and commit those files if you want the latest PNGs in the repo for the team; otherwise they stay local. The only asset the README needs for the inline GIF is `docs/images/map_timelapse.gif`.
 
 ## Current data choices (locked in this repo)
 
