@@ -6,9 +6,3 @@ __pycache__/
 data/raw/*
 !data/raw/.gitkeep
 
-# Self-contained frontend bundle (run scripts/sync_frontend_data.py)
-outputs/frontend-snapshot/
-outputs/frontend-snapshot.zip
-
-# Playwright + Pillow captures (regenerate with scripts/capture_frontend_media.py)
-outputs/frontend-captures/

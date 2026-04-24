@@ -151,6 +151,8 @@ Or, with a venv already set up, `make frontend-captures`. Handy flags: `--no-gif
 
 `cp outputs/frontend-captures/map_timelapse.gif docs/images/map_timelapse.gif` and commit.
 
+The script also writes `map_overview.png` and `app_full.png` under `outputs/frontend-captures/`. That folder is **not** gitignored—you can add and commit those files if you want the latest PNGs in the repo for the team; otherwise they stay local. The only asset the README needs for the inline GIF is `docs/images/map_timelapse.gif`.
+
 ## Current data choices (locked in this repo)
 
 - **Incidents:** 2024 NFIRS PDR Light, filtered to `STATE_ID='GA'`, `CITY='Atlanta'`, fire `INC_TYPE` 100–199, and `AID` in `1`, `2`, or `N` to reduce double-counting from aid records.
