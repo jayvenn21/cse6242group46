@@ -86,7 +86,7 @@ By default this lands in `data/processed/`:
 
 `model_table.parquet` is what we feed into RF, ARIMA, and the rest of the baselines.
 
-### Run the frontend (local)
+## Run the frontend (local)
 You need `baselines/outputs/model_results.csv` (and the usual `data/processed/` + interpretability files) in place first—same as for the hosted site. From the **repo root**, start a small server so the app can load data (browsers block that from `file://`):
 ```bash
 python3 -m http.server 8000
