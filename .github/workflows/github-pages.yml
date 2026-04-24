@@ -1,0 +1,50 @@
+# Publishes the static site by pushing to the gh-pages branch.
+# Avoids actions/deploy-pages, which can return 404 if "GitHub Actions" isn't
+# enabled as a Pages source (common on org repos or without admin).
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Assemble static site
+        run: |
+          set -e
+          mkdir -p site/data/processed site/baselines/outputs site/outputs/interpretability
+          cp -r frontend site/
+          cp data/processed/grid_cells.geojson site/data/processed/
+          cp baselines/outputs/model_results.csv site/baselines/outputs/
+          cp outputs/interpretability/* site/outputs/interpretability/
+          cat > site/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8" />
+            <meta http-equiv="refresh" content="0; url=frontend/index.html" />
+            <title>Fire risk explorer</title>
+          </head>
+          <body>
+            <p><a href="frontend/index.html">Open the app</a></p>
+          </body>
+          </html>
+          EOF
+
+      - name: Push to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          force_orphan: true
