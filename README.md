@@ -88,7 +88,7 @@ By default this lands in `data/processed/`:
 
 ## The map app (Leaflet + D3)
 
-The same app is **hosted** here (no local server needed): **[https://jayvenn21.github.io/cse6242group46/frontend/index.html](https://jayvenn21.github.io/cse6242group46/frontend/index.html)**.
+**Hosted app:** **[https://jayvenn21.github.io/cse6242group46/frontend/index.html](https://jayvenn21.github.io/cse6242group46/frontend/index.html)**
 
 There’s a static site under `frontend/` that turns the model outputs into something you can **explore in time and space**—after you’ve run the baselines you get a live choropleth over Atlanta, not just another CSV.
 
@@ -112,19 +112,7 @@ This GIF was recorded with `scripts/capture_frontend_media.py` (headless Chrome 
   <img src="./docs/images/map_timelapse.gif" width="600" height="350" alt="Fire risk map: choropleth updates as the date slider moves">
 </p>
 
-### Run it in a browser
-
-From the **repo root** (so paths like `../data/...` resolve the same as in class):
-
-```bash
-python3 -m http.server 8000
-```
-
-Then open **http://localhost:8000/frontend/index.html** in a normal tab. Browsers won’t load the data off `file://`, so a tiny local server is the usual trick.
-
-**Same UI online:** if you just want to explore the vis, use the [GitHub Pages build](https://jayvenn21.github.io/cse6242group46/frontend/index.html) instead of localhost.
-
-### Host the same app on GitHub (Pages)
+### Host the app on GitHub (Pages)
 
 You can. The map is all static files, and **GitHub Pages** can host them for free on a public repo. This repo includes a workflow (`.github/workflows/github-pages.yml`) that copies `frontend/`, the grid GeoJSON, `model_results.csv`, and `outputs/interpretability/` into a small deploy bundle and publishes it on every push to `main` or `master` (or when you run the workflow manually from the **Actions** tab).
 
@@ -138,7 +126,7 @@ After that, the site is at
 `https://<your-username-or-org>.github.io/<repo-name>/`  
 (the root `index.html` redirects to `frontend/index.html`).
 
-The relative URLs in `frontend/js/config.js` still work, because the deployed tree keeps `frontend/`, `data/`, `baselines/`, and `outputs/` next to each other the same way as on your laptop. If you update the model CSV or the grid, commit and push so the workflow updates `gh-pages`.
+The relative URLs in `frontend/js/config.js` work because the deployed tree keeps `frontend/`, `data/`, `baselines/`, and `outputs/` next to each other. If you update the model CSV or the grid, commit and push so the workflow updates `gh-pages`.
 
 **If you still see 404 in the browser:** wait a minute after the workflow turns green, hard-refresh, and confirm the Pages URL uses your **repo name** and (for a project site) the path is `/repo-name/`, not the org’s main user page unless that’s what you set up.
 
