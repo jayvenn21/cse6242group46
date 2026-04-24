@@ -86,6 +86,13 @@ By default this lands in `data/processed/`:
 
 `model_table.parquet` is what we feed into RF, ARIMA, and the rest of the baselines.
 
+### Run the frontend (local)
+You need `baselines/outputs/model_results.csv` (and the usual `data/processed/` + interpretability files) in place first—same as for the hosted site. From the **repo root**, start a small server so the app can load data (browsers block that from `file://`):
+```bash
+python3 -m http.server 8000
+```
+Then open **http://localhost:8000/frontend/index.html** in your browser. If you only want to poke at the UI without cloning, use the [live link](https://jayvenn21.github.io/cse6242group46/frontend/index.html) at the top of this README instead.
+
 ## The map app (Leaflet + D3)
 
 **Hosted app:** **[https://jayvenn21.github.io/cse6242group46/frontend/index.html](https://jayvenn21.github.io/cse6242group46/frontend/index.html)**
