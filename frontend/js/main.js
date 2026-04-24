@@ -1,5 +1,19 @@
+import { DATA, METRIC_OPTIONS, TS_METRICS } from "./config.js";
+import {
+  createFormatters,
+  fieldHasValue,
+  loadExplainIndex,
+  normDate,
+  parseISODate,
+  formatDateLong,
+  colorScaleFor,
+} from "./utils.js";
+
 (function () {
   "use strict";
+
+  const d3 = window.d3;
+  const L = window.L;
 
   if (typeof L === "undefined" || typeof d3 === "undefined") {
     document.getElementById("error-banner").className = "error-banner visible";
@@ -8,29 +22,7 @@
     return;
   }
 
-  const DATA = {
-    grid: new URL("../data/processed/grid_cells.geojson", document.baseURI).href,
-    model: new URL("../baselines/outputs/model_results.csv", document.baseURI).href,
-    explain: new URL(
-      "../outputs/interpretability/explanations.csv",
-      document.baseURI
-    ).href,
-  };
-
-  const METRIC_OPTIONS = [
-    { value: "rf_prob", label: "Random Forest P(fire / hotspot)" },
-    { value: "hotspot_prob", label: "Hotspot model prob." },
-    { value: "arima_prob", label: "ARIMA prob." },
-    { value: "arima_forecast", label: "ARIMA forecast" },
-    { value: "incident_count", label: "Incidents (interval)" },
-    { value: "target_next_interval", label: "Next-interval target" },
-  ];
-
-  const TS_METRICS = [
-    { key: "rf_prob", name: "RF", color: "#7dd3fc" },
-    { key: "hotspot_prob", name: "Hotspot", color: "#fb923c" },
-    { key: "arima_prob", name: "ARIMA", color: "#4ade80" },
-  ];
+  const { fmt, fmt2 } = createFormatters(d3);
 
   const el = {
     err: d3.select("#error-banner"),
@@ -60,22 +52,6 @@
     tooltip: d3.select("#chart-tooltip"),
   };
 
-  const fmt = d3.format(".3f");
-  const fmt2 = d3.format(".2f");
-
-  function fieldHasValue(v) {
-    if (v === undefined || v === null) {
-      return false;
-    }
-    if (typeof v === "number") {
-      return v === v;
-    }
-    if (typeof v === "string") {
-      return v.trim() !== "";
-    }
-    return true;
-  }
-
   function setInterpretationSections(exRow, hasNarrative) {
     const showExplain = Boolean(!exRow || hasNarrative);
     el.sectionExplain.property("hidden", !showExplain);
@@ -84,54 +60,6 @@
 
   function showError(msg) {
     el.err.classed("visible", true).text(msg);
-  }
-
-  function valueExtent(rows, key) {
-    const vals = rows
-      .map((d) => +d[key])
-      .filter((v) => v === v);
-    if (!vals.length) {
-      return [0, 1];
-    }
-    return d3.extent(vals);
-  }
-
-  function loadExplainIndex(rows) {
-    const m = d3.rollup(
-      rows,
-      (v) => v[0],
-      (d) => d.grid_id,
-      (d) => d.date
-    );
-    return (gridId, date) => m.get(gridId)?.get(String(date)) ?? null;
-  }
-
-  function normDate(d) {
-    if (d instanceof Date) {
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, "0");
-      const day = String(d.getDate()).padStart(2, "0");
-      return `${y}-${m}-${day}`;
-    }
-    return String(d);
-  }
-
-  function parseISODate(iso) {
-    const p = String(iso).split("-");
-    if (p.length !== 3) {
-      return new Date(iso);
-    }
-    return new Date(+p[0], +p[1] - 1, +p[2]);
-  }
-
-  function colorScaleFor(rows, metric) {
-    const ex0 = valueExtent(rows, metric);
-    let lo = ex0[0];
-    let hi = ex0[1];
-    if (lo === hi) {
-      hi = lo + 1e-9;
-    }
-    return d3.scaleSequential(d3.interpolateYlOrRd).domain([lo, hi]);
   }
 
   function moveTooltip(x, y, html) {
@@ -188,7 +116,7 @@
 
       const explainLookup =
         explainRows && explainRows.length
-          ? loadExplainIndex(explainRows)
+          ? loadExplainIndex(d3, explainRows)
           : null;
 
       function explainDatesForGrid(gid) {
@@ -227,15 +155,6 @@
           }
         });
         return best;
-      }
-
-      function formatDateLong(iso) {
-        return parseISODate(iso).toLocaleDateString(undefined, {
-          weekday: "short",
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        });
       }
 
       function syncDateUI() {
@@ -355,7 +274,7 @@
         const sub = byDate.get(dStr) || [];
         styleRmap = d3.index(sub, (r) => r.grid_id);
         styleMetric = metric;
-        const cScale = colorScaleFor(sub, metric);
+        const cScale = colorScaleFor(d3, sub, metric);
         updateLegend(cScale.domain()[0], cScale.domain()[1]);
       }
 
