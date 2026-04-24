@@ -1,13 +1,12 @@
 # Ignition Insights Preprocessing
 
-Preprocessing pipeline for Team 46's CSE 6242 project: cleaning fire incidents, joining daily weather, building a fixed grid, aggregating to cell-day counts, and writing a model-ready table.
+This is Team 46’s CSE 6242 project pipeline: we take raw fire incidents, match them to daily weather, put everything on a fixed city grid, and end up with a table you can hand to baselines and models.
 
 ## Dataset assumptions
 
-- Fire incidents: FEMA/USFA NFIRS annual public data release, ideally a geocoded export (`.gpkg`, `.csv`, or `.parquet`).
-- Weather: daily citywide weather file with date plus temperature, humidity, precipitation, and wind columns.
-- The script inspects the actual file schema and tries to infer the right columns. CLI overrides are available if the source names differ.
-- Because annual NFIRS files are national and large, you should filter to the study area when running the pipeline.
+- **Fire data:** FEMA NFIRS (or similar) — `.gpkg`, `.csv`, or `.parquet` with locations.
+- **Weather:** one row per day with date, plus temperature, humidity, precipitation, and wind. The build script tries to guess column names; you can override on the command line.
+- NFIRS is huge national data, so you’ll almost always want to **filter to your city** before running the heavy steps.
 
 ## Install
 
@@ -15,9 +14,11 @@ Preprocessing pipeline for Team 46's CSE 6242 project: cleaning fire incidents, 
 python3 -m pip install -r requirements.txt
 ```
 
+`requirements.txt` also lists **Playwright** and **Pillow** for the optional capture script that records the map GIF for this README. If you only care about the data pipeline, you can ignore them until you need to refresh screenshots. The first time you run captures, you’ll also run `python -m playwright install chromium` once.
+
 ## Run
 
-Real handoff run used for this repo:
+What we actually used in this repo (Atlanta, 2024-style handoff):
 
 ```bash
 python3 scripts/fetch_nfirs_light.py \
@@ -40,7 +41,7 @@ python3 scripts/build_model_table.py \
   --outdir data/processed
 ```
 
-Generic example:
+A more generic example (your own paths and filters):
 
 ```bash
 python3 scripts/build_model_table.py \
@@ -55,7 +56,7 @@ python3 scripts/build_model_table.py \
   --outdir data/processed
 ```
 
-If the script cannot infer a source column, override it explicitly:
+If the auto-detect step can’t find a column, name it yourself, for example:
 
 ```bash
 python3 scripts/build_model_table.py \
@@ -74,20 +75,89 @@ python3 scripts/build_model_table.py \
 
 ## Outputs
 
-Written to `data/processed/` by default:
+By default this lands in `data/processed/`:
 
 - `incidents_clean.parquet`
 - `grid_cells.geojson`
 - `cell_day_table.parquet`
 - `model_table.parquet`
 
-`model_table.parquet` is the main deliverable for RF/XGBoost/baseline modeling.
+`model_table.parquet` is what we feed into RF, ARIMA, and the rest of the baselines.
 
-## Current locked data choice
+## The map app (Leaflet + D3)
 
-- Fire incidents: 2024 NFIRS PDR Light feature layer derived from the FEMA/USFA NFIRS Public Data Release, filtered to `STATE_ID='GA'`, `CITY='Atlanta'`, `INC_TYPE` in the fire range `100-199`, and `AID` in `('1','2','N')` to avoid aid-given double counts.
-- Weather: Open-Meteo historical daily archive for Atlanta (`33.7490, -84.3880`) with daily mean temperature, mean relative humidity, precipitation sum, and max 10m wind speed.
+There’s a static site under `frontend/` that turns the model outputs into something you can **explore in time and space**—after you’ve run the baselines you get a live choropleth over Atlanta, not just another CSV.
+
+### What you’re looking at
+
+The main view is a **hex-style grid** (GeoJSON cells) laid on a light basemap. Each cell is a fixed neighborhood patch; color encodes whatever you pick in **“Color by”** for the **selected day**. The legend at the bottom of the map shows the scale (roughly yellow → deep red) and the min/max of that metric *across cells that have a model row on that day*, so the map is always comparable within the current day and metric.
+
+You can color by several fields from `model_results.csv`, including **RF probability**, **hotspot / ARIMA model scores**, **ARIMA forecast**, **incident counts** in the interval, and the **next-interval target**—so the same grid can show “model belief” or raw outcome structure, depending on what you want to study.
+
+The **time control** at the top is a date index (not a free calendar): it steps through the dates that actually appear in the model file. **Play** animates forward through those dates. When you move time, every view that depends on “today” updates together: the map fill, the status line under the map, the distribution plot, and (if you’ve selected a cell) the snapshot table for that day.
+
+**Hover** a cell to see its id and the current metric value in the status strip; **click** a cell to “latch” it. The right-hand column then shows (1) a **histogram** of the chosen metric over all cells with data on that day, (2) a **small-multiple line chart** of the three model probability tracks for *that cell* across *all* dates in the CSV, and (3) a **read-only table** of key fields for that cell on the selected day. If you generated `explanations.csv`, you also get a short **narrative** and a **horizontal bar chart of top SHAP drivers** for that cell–date when a row exists. **Clicking a point** on the time-series chart jumps the global date scrubber to the nearest modeled day so the map and table stay in sync—that’s the main “linked view” gesture besides the slider.
+
+Technically, **Leaflet** owns the map and tiles; **D3** builds the scales, paths, axes, brushes, and text for the charts and legend. No bundler—ES modules in `frontend/js/`, D3 7 and Leaflet from CDNs.
+
+### Quick preview
+
+This GIF was recorded with `scripts/capture_frontend_media.py` (headless Chrome via Playwright). It’s the choropleth stepping through a few model dates with the time slider.
+
+<p align="center">
+  <img src="./docs/images/map_timelapse.gif" width="600" height="350" alt="Fire risk map: choropleth updates as the date slider moves">
+</p>
+
+### Run it in a browser
+
+From the **repo root** (so paths like `../data/...` resolve the same as in class):
+
+```bash
+python3 -m http.server 8000
+```
+
+Then open **http://localhost:8000/frontend/index.html** in a normal tab. Browsers won’t load the data off `file://`, so a tiny local server is the usual trick.
+
+### Host the same app on GitHub (Pages)
+
+You can. The map is all static files, and **GitHub Pages** can host them for free on a public repo. This repo includes a workflow (`.github/workflows/github-pages.yml`) that copies `frontend/`, the grid GeoJSON, `model_results.csv`, and `outputs/interpretability/` into a small deploy bundle and publishes it on every push to `main` or `master` (or when you run the workflow manually from the **Actions** tab).
+
+**One-time setup in the GitHub UI**
+
+1. Push the workflow to GitHub and merge to `main` (or your default branch that matches the workflow).
+2. In the repo: **Settings → Pages → Build and deployment → Source:** choose **GitHub Actions** (not “Deploy from a branch” unless you prefer that route).
+3. After the first successful run, your site will be at  
+   `https://<your-username-or-org>.github.io/<repo-name>/`  
+   (that root redirects to `frontend/index.html`).
+
+The relative URLs in `frontend/js/config.js` still work, because the deployed tree keeps `frontend/`, `data/`, `baselines/`, and `outputs/` next to each other the same way as on your laptop. If you update the model CSV or the grid, commit and push so the workflow ships a new build.
+
+**Private repositories:** free GitHub Pages for private repos has limits on who can use it; for class projects, a **public** repo is usually the path of least resistance. If you use a private repo, check GitHub’s current docs for Pages availability on your plan.
+
+## Updating the GIF in this README
+
+If you change the model output or the UI, you can re-record the clip:
+
+```bash
+python3 -m venv .venv
+. .venv/bin/activate
+python3 -m pip install -r requirements.txt
+python -m playwright install chromium
+python3 scripts/capture_frontend_media.py
+# writes outputs/frontend-captures/{map_overview.png,app_full.png,map_timelapse.gif}
+```
+
+Or, with a venv already set up, `make frontend-captures`. Handy flags: `--no-gif`, `--gif-frames 10`, `--gif-ms 500`, `--viewport 1600x1000`. When you’re happy with it, copy the new animation over the one GitHub shows:
+
+`cp outputs/frontend-captures/map_timelapse.gif docs/images/map_timelapse.gif` and commit.
+
+The script also writes `map_overview.png` and `app_full.png` under `outputs/frontend-captures/`. That folder is **not** gitignored—you can add and commit those files if you want the latest PNGs in the repo for the team; otherwise they stay local. The only asset the README needs for the inline GIF is `docs/images/map_timelapse.gif`.
+
+## Current data choices (locked in this repo)
+
+- **Incidents:** 2024 NFIRS PDR Light, filtered to `STATE_ID='GA'`, `CITY='Atlanta'`, fire `INC_TYPE` 100–199, and `AID` in `1`, `2`, or `N` to reduce double-counting from aid records.
+- **Weather:** Open-Meteo daily history for `33.749, -84.388` — mean temp, mean RH, daily precip, and max 10 m wind.
 
 ## Scope note
 
-This repo currently builds a model table from NFIRS fire incidents plus citywide daily weather and time/history features only. It does not currently add 911 incident data, census joins, or other neighborhood-context covariates, so downstream writeups should not claim those features were implemented here unless another team component adds them.
+Right now the table is **only** NFIRS + citywide daily weather + time/history features. We are **not** folding in 911, census, or other neighborhood context unless another part of the project adds that — don’t claim those in the writeup if they aren’t in this branch.
