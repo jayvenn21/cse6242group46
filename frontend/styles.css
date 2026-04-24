@@ -270,7 +270,6 @@ main {
   flex: 1;
   display: grid;
   grid-template-columns: 1fr 320px;
-  /* One row must consume remaining vertical space; `auto` collapses the map. */
   grid-template-rows: 1fr;
   min-height: 0;
 }
@@ -285,7 +284,6 @@ main {
 #map-container {
   position: relative;
   min-height: 0;
-  /* Between tiles (Voyager land is ~#dbe0e0); avoids harsh black when panning. */
   background: #d6d8dc;
   height: 100%;
   align-self: stretch;
@@ -306,7 +304,6 @@ main {
   );
 }
 
-/* Leaflet needs a sized box; absolute fill works with grid 1fr height */
 #leaflet-map {
   position: absolute;
   inset: 0;
@@ -475,7 +472,7 @@ aside h2,
 }
 
 #dist-chart {
-  min-height: 9.4rem; /* ≈ 150/320 of typical column width, fallback if aspect-ratio fails */
+  min-height: 9.4rem;
 }
 
 #shap-chart {

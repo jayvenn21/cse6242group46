@@ -1,7 +1,3 @@
-/**
- * Fire risk explorer: Leaflet map + D3 (linked charts, interaction, scales).
- * Serve repo root: python3 -m http.server 8000 → /frontend/index.html
- */
 (function () {
   "use strict";
 
@@ -30,7 +26,6 @@
     { value: "target_next_interval", label: "Next-interval target" },
   ];
 
-  /** Probabilities (and ARIMA prob) for the time-series / comparison chart */
   const TS_METRICS = [
     { key: "rf_prob", name: "RF", color: "#7dd3fc" },
     { key: "hotspot_prob", name: "Hotspot", color: "#fb923c" },
@@ -1068,9 +1063,7 @@
           const dataBounds = geoLayer.getBounds();
           map.setMaxBounds(dataBounds.pad(0.28));
           map.fitBounds(dataBounds, { padding: [12, 12], maxZoom: 13 });
-        } catch (e) {
-          /* ignore */
-        }
+        } catch (e) {}
       }
 
       const PLAYBACK_MS = 600;
