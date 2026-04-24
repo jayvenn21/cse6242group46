@@ -42,7 +42,7 @@ The main gap we see in this literature is that most systems do one or two of for
 
 ### Intuition
 
-The bet is straightforward: if you give a model recent incident counts, weather, day-of-week, and which cell you are talking about, it should be able to rank cells by relative risk better than a static hotspot map. And if you pair that ranking with a SHAP breakdown and a dashboard that lets you scrub through time, the output becomes something a person can actually reason about -- not just a CSV of probabilities.
+The idea is straightforward: if you give a model recent incident counts, weather, day-of-week, and which cell you are looking at, it should be able to rank cells by relative risk better than a static hotspot map. And if you pair that ranking with a SHAP breakdown and a dashboard that lets you scrub through time, the output becomes something a person can actually reason about -- not just a CSV of probabilities.
 
 ### Data
 
