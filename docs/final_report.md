@@ -2,8 +2,6 @@
 
 **Team 46:** Vishruth Anand, Vineeth Nareddy, Rian Rahman, James Reilly, Jayanth Vennamreddy
 
----
-
 ## 1 Introduction
 
 Fire departments decide where to staff, what to inspect, and how ready to be -- all without knowing where the next call comes from. Fire activity is not spread evenly across a city. Some neighborhoods see repeat incidents month after month; others go quiet for long stretches and then spike. Weather, day of week, and recent local history all seem to play a role, but the raw incident log does not make any of that easy to see. You get a table of past events, not a picture of where risk sits right now or why.
@@ -118,11 +116,7 @@ To put PR-AUC in context: a random classifier on data with 0.5% positives would 
 
 ### Observations from the dashboard
 
-Looking at the interactive map, a few patterns stand out:
-- Cells in midtown and southwest Atlanta consistently score higher across models. The hotspot baseline captures this but does not differentiate between days.
-- RF probabilities vary meaningfully day to day in a way that hotspot scores do not, reflecting the influence of weather and recent activity.
-- The SHAP explanations for high-risk cells almost always point to `rolling_sum_14` and `rolling_sum_7` as the top drivers, with `month` and `wind` showing up as secondary factors. This makes sense: recent local activity is the strongest short-term signal.
-- On days with zero observed fires city-wide, RF probabilities drop across the board but the spatial ranking is still preserved -- the same cells that are usually "riskier" still rank at the top.
+Looking at the interactive map, a few patterns stand out. Cells in midtown and southwest Atlanta consistently score higher across models; the hotspot baseline captures this but does not differentiate between days. RF probabilities vary meaningfully day to day in a way that hotspot scores do not, reflecting the influence of weather and recent activity. The SHAP explanations for high-risk cells almost always point to `rolling_sum_14` and `rolling_sum_7` as the top drivers, with `month` and `wind` showing up as secondary factors -- recent local activity is the strongest short-term signal. On days with zero observed fires city-wide, RF probabilities drop across the board but the spatial ranking is still preserved: the same cells that are usually riskier still rank at the top.
 
 ## 6 Conclusions and Discussion
 
@@ -133,8 +127,6 @@ We built an end-to-end pipeline and dashboard for exploring fire risk in Atlanta
 **Future work.** Adding neighborhood-level context (census, zoning, building stock) would give the model more to work with. Gradient boosting or a spatiotemporal neural network could improve ranking. On the visualization side, a task-based user study would tell us whether the linked-view design actually helps decision-making compared to a simpler static map.
 
 **Effort distribution:** All team members contributed a similar amount of effort. Vishruth Anand: data sourcing, cleaning, preprocessing, feature engineering. Vineeth Nareddy: baseline models, RF, evaluation metrics. Jayanth Vennamreddy: spatial grid construction, temporal aggregation, map rendering and prediction overlays. James Reilly: interpretability, SHAP analysis, explanation panel. Rian Rahman: frontend integration, D3/Leaflet linked views, visual polish, report structure. Everyone contributed to final review, poster content, and presentation prep.
-
----
 
 ## References
 
