@@ -1,5 +1,3 @@
-# Publishes the static map app to GitHub Pages.
-# After the first run, open: https://<owner>.github.io/<repo>/
 name: Deploy to GitHub Pages
 
 on:

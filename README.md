@@ -86,9 +86,19 @@ By default this lands in `data/processed/`:
 
 ## The map app (Leaflet + D3)
 
-There’s a small static site under `frontend/` you can open after you’ve run the baselines and have `model_results.csv` (and the interpretability files if you want the explanation side panel). **Leaflet** shows the basemap and wires up the grid from GeoJSON. **D3** drives everything that feels like a chart: the colored cells and legend, the time scrubber, the histogram for “this day,” the per-cell time series, and the SHAP-style bars when that CSV is there.
+There’s a static site under `frontend/` that turns the model outputs into something you can **explore in time and space**—after you’ve run the baselines you get a live choropleth over Atlanta, not just another CSV.
 
-The idea is **linked views**: one date and one “color by” choice drive the map, the small multiples, and the readouts together. Scrub the slider and the map updates; pick a cell and the line chart locks onto that `grid_id`; click the chart and the slider jumps. No bundler — plain ES modules, D3 7, Leaflet, from CDNs.
+### What you’re looking at
+
+The main view is a **hex-style grid** (GeoJSON cells) laid on a light basemap. Each cell is a fixed neighborhood patch; color encodes whatever you pick in **“Color by”** for the **selected day**. The legend at the bottom of the map shows the scale (roughly yellow → deep red) and the min/max of that metric *across cells that have a model row on that day*, so the map is always comparable within the current day and metric.
+
+You can color by several fields from `model_results.csv`, including **RF probability**, **hotspot / ARIMA model scores**, **ARIMA forecast**, **incident counts** in the interval, and the **next-interval target**—so the same grid can show “model belief” or raw outcome structure, depending on what you want to study.
+
+The **time control** at the top is a date index (not a free calendar): it steps through the dates that actually appear in the model file. **Play** animates forward through those dates. When you move time, every view that depends on “today” updates together: the map fill, the status line under the map, the distribution plot, and (if you’ve selected a cell) the snapshot table for that day.
+
+**Hover** a cell to see its id and the current metric value in the status strip; **click** a cell to “latch” it. The right-hand column then shows (1) a **histogram** of the chosen metric over all cells with data on that day, (2) a **small-multiple line chart** of the three model probability tracks for *that cell* across *all* dates in the CSV, and (3) a **read-only table** of key fields for that cell on the selected day. If you generated `explanations.csv`, you also get a short **narrative** and a **horizontal bar chart of top SHAP drivers** for that cell–date when a row exists. **Clicking a point** on the time-series chart jumps the global date scrubber to the nearest modeled day so the map and table stay in sync—that’s the main “linked view” gesture besides the slider.
+
+Technically, **Leaflet** owns the map and tiles; **D3** builds the scales, paths, axes, brushes, and text for the charts and legend. No bundler—ES modules in `frontend/js/`, D3 7 and Leaflet from CDNs.
 
 ### Quick preview
 

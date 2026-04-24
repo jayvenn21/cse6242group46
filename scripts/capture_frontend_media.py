@@ -1,9 +1,3 @@
-#!/usr/bin/env python3
-"""
-Capture PNGs and a time-scrubber GIF of the fire risk app (headless Chromium).
-
-Prerequisites: `pip install -r requirements.txt` and `python -m playwright install chromium`
-"""
 from __future__ import annotations
 
 import argparse
