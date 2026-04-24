@@ -124,13 +124,17 @@ You can. The map is all static files, and **GitHub Pages** can host them for fre
 
 **One-time setup in the GitHub UI**
 
-1. Push the workflow to GitHub and merge to `main` (or your default branch that matches the workflow).
-2. In the repo: **Settings → Pages → Build and deployment → Source:** choose **GitHub Actions** (not “Deploy from a branch” unless you prefer that route).
-3. After the first successful run, your site will be at  
-   `https://<your-username-or-org>.github.io/<repo-name>/`  
-   (that root redirects to `frontend/index.html`).
+1. Merge or push the workflow to `main` (or `master`) so it runs at least once. It **creates/updates a `gh-pages` branch** with the static files (this does not use the “GitHub Actions” Pages API that often returns 404 for orgs or when Pages isn’t fully enabled).
+2. **Settings → Pages → Build and deployment → Source:** choose **Deploy from a branch**.
+3. **Branch:** `gh-pages`, **folder:** `/ (root)**, then **Save**.
 
-The relative URLs in `frontend/js/config.js` still work, because the deployed tree keeps `frontend/`, `data/`, `baselines/`, and `outputs/` next to each other the same way as on your laptop. If you update the model CSV or the grid, commit and push so the workflow ships a new build.
+After that, the site is at  
+`https://<your-username-or-org>.github.io/<repo-name>/`  
+(the root `index.html` redirects to `frontend/index.html`).
+
+The relative URLs in `frontend/js/config.js` still work, because the deployed tree keeps `frontend/`, `data/`, `baselines/`, and `outputs/` next to each other the same way as on your laptop. If you update the model CSV or the grid, commit and push so the workflow updates `gh-pages`.
+
+**If you still see 404 in the browser:** wait a minute after the workflow turns green, hard-refresh, and confirm the Pages URL uses your **repo name** and (for a project site) the path is `/repo-name/`, not the org’s main user page unless that’s what you set up.
 
 **Private repositories:** free GitHub Pages for private repos has limits on who can use it; for class projects, a **public** repo is usually the path of least resistance. If you use a private repo, check GitHub’s current docs for Pages availability on your plan.
 
