@@ -11,3 +11,5 @@ matplotlib>=3.5.0
 PyYAML>=6.0
 folium>=0.15
 shap
+playwright>=1.40.0
+pillow>=10.0.0

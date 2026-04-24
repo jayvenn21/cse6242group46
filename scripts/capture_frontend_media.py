@@ -1,14 +1,8 @@
 #!/usr/bin/env python3
 """
-Capture screenshots and an optional animated GIF of the fire risk explorer
-without manual browser work.
+Capture PNGs and a time-scrubber GIF of the fire risk app (headless Chromium).
 
-Serves the repo root over HTTP (required: fetch() cannot load data from
-file://), then drives Chromium via Playwright.
-
-Prerequisites:
-  pip install -r requirements-capture.txt
-  playwright install chromium
+Prerequisites: `pip install -r requirements.txt` and `python -m playwright install chromium`
 """
 from __future__ import annotations
 
@@ -123,7 +117,7 @@ def main() -> int:
 
     if Image is None or sync_playwright is None:
         print(
-            "Install: pip install -r requirements-capture.txt && playwright install chromium",
+            "Install: pip install -r requirements.txt && python -m playwright install chromium",
             file=sys.stderr,
         )
         return 1

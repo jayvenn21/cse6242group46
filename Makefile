@@ -9,6 +9,6 @@ frontend-snapshot:
 frontend-snapshot-zip:
 	python3 scripts/sync_frontend_data.py --zip
 
-# PNG + GIF of the live UI (Playwright; needs .venv with requirements-capture.txt)
+# PNG + GIF of the live UI (Playwright; use .venv with requirements.txt)
 frontend-captures:
 	. .venv/bin/activate && python scripts/capture_frontend_media.py

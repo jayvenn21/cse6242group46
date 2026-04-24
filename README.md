@@ -15,6 +15,8 @@ Preprocessing pipeline for Team 46's CSE 6242 project: cleaning fire incidents, 
 python3 -m pip install -r requirements.txt
 ```
 
+The same file includes **Playwright** and **Pillow** for `scripts/capture_frontend_media.py`. They are safe to install for the data pipeline; you only need `python -m playwright install chromium` the first time you want to regenerate the README demo GIF and screenshots.
+
 ## Run
 
 Real handoff run used for this repo:
@@ -83,6 +85,28 @@ Written to `data/processed/` by default:
 
 `model_table.parquet` is the main deliverable for RF/XGBoost/baseline modeling.
 
+## Fire risk explorer: D3.js and Leaflet
+
+The `frontend/` app is a static **linked-views** dashboard. **Leaflet** draws the Atlanta grid from GeoJSON, colors each cell (choropleth) from a column in `model_results.csv`, and handles pan/zoom. The basemap and grid use Leaflet; everything analytical on the page is **D3 v7**.
+
+**D3’s role** is to bind the same underlying tables to several coordinated views, so a change in the global “time” or the selected metric updates every view in sync:
+
+- **Choropleth and legend** — A sequential color scale (yellow–orange–red) is built from the extent of the chosen metric across all cells for the *currently selected day*. D3 re-styles GeoJSON features when you scrub the date, change “Color by,” or pick a new cell.
+- **Time scrubber (range input)** — Moving the date re-filters the join between grid features and the model table; the readout, map, and the “distribution for this day” view all read the same `dateIndex` state.
+- **Distribution (histogram)** — A bar chart of the current metric’s values over cells that have a model row on that day (D3 `scaleLinear` / bins).
+- **Time series (selected cell)** — For one `grid_id`, three model outputs (RF, hotspot, ARIMA) are shown as lines across all dates. Hover for values; a click on the series jumps the time scrubber to the nearest day (cross-view linking).
+- **Explanations + SHAP panel** — When `outputs/interpretability/explanations.csv` is present, narrative text and a horizontal bar chart of top SHAP drivers are built with D3 from the same row; otherwise those panels stay empty or hidden.
+
+No bundler is required: modules under `frontend/js/` load in the browser; D3 and Leaflet are pulled from CDNs. Serve the app over HTTP (see below) so `fetch` can load the CSV and GeoJSON.
+
+### Demo (time scrubber on the map)
+
+The clip below is generated with `scripts/capture_frontend_media.py` (Chromium + Playwright). The choropleth updates as the time slider steps through the modeled dates.
+
+![Animated demo: map choropleth while scrubbing the date slider](docs/images/map_timelapse.gif)
+
+To **refresh** this file after a pipeline run, regenerate captures (see the next section) and replace `docs/images/map_timelapse.gif` with a copy of `outputs/frontend-captures/map_timelapse.gif`, then commit.
+
 ## Frontend (static snapshot)
 
 The web UI under `frontend/` loads GeoJSON/CSV from `data/`, `baselines/outputs/`, and `outputs/interpretability/` using paths relative to `frontend/index.html`. To bundle **only what the app needs** for a folder upload or zip (e.g. Netlify, class submission):
@@ -101,20 +125,22 @@ cd outputs/frontend-snapshot && python3 -m http.server 8000
 
 Optional zip: `python3 scripts/sync_frontend_data.py --zip` (or `make frontend-snapshot-zip`) creates `outputs/frontend-snapshot.zip`. For **Netlify** (or similar), set the **publish directory** to `outputs/frontend-snapshot` and open `/frontend/index.html`, or add a root redirect to that path. Regenerate the snapshot after you refresh `data/processed/`, `baselines/outputs/model_results.csv`, or `outputs/interpretability/`.
 
-## Screenshots and animated GIF of the app
+## Regenerating screenshots and the README GIF
 
-The data sync above only **copies files**; it does not render the UI. To **generate PNGs and a time-scrubber GIF** (e.g. for a report or presentation), use Playwright in a small venv:
+The data sync **copies** files; it does not render the browser. To **regenerate** PNGs and the time-scrubber GIF (e.g. after the model or UI changes), install the full `requirements.txt` and Chromium for Playwright, then run the capture script:
 
 ```bash
 python3 -m venv .venv
 . .venv/bin/activate
-pip install -r requirements-capture.txt
+python3 -m pip install -r requirements.txt
 python -m playwright install chromium
 python3 scripts/capture_frontend_media.py
-# outputs/frontend-captures/map_overview.png, app_full.png, map_timelapse.gif
+# → outputs/frontend-captures/map_overview.png, app_full.png, map_timelapse.gif
 ```
 
-`make frontend-captures` does the same if `.venv` exists and has those packages installed. Options: `--no-gif`, `--gif-frames 10`, `--gif-ms 500`, `--viewport 1600x1000`. The script starts a local HTTP server (same as a normal `python3 -m http.server` from the repo root) because browsers block `file://` data loads.
+`make frontend-captures` is equivalent if you use a `.venv` in the project root. Options: `--no-gif`, `--gif-frames 10`, `--gif-ms 500`, `--viewport 1600x1000`. The script starts a local HTTP server from the **repo root** (same as `python3 -m http.server` there) so `fetch` to `data/` and `baselines/outputs/` works; `file://` is not used.
+
+**README figure:** after capture, you can `cp outputs/frontend-captures/map_timelapse.gif docs/images/map_timelapse.gif` so the demo above stays current on GitHub.
 
 ## Current locked data choice
 
