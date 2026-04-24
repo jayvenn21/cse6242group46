@@ -118,25 +118,21 @@ python3 -m http.server 8000
 
 Then open **http://localhost:8000/frontend/index.html** in a normal tab. Browsers won’t load the data off `file://`, so a tiny local server is the usual trick.
 
-### Host the same app on GitHub (Pages)
+### Host the same app on Vercel (no GitHub “owner” on the org repo)
 
-You can. The map is all static files, and **GitHub Pages** can host them for free on a public repo. This repo includes a workflow (`.github/workflows/github-pages.yml`) that copies `frontend/`, the grid GeoJSON, `model_results.csv`, and `outputs/interpretability/` into a small deploy bundle and publishes it on every push to `main` or `master` (or when you run the workflow manually from the **Actions** tab).
+The app is all static files. This repo is set up for **[Vercel](https://vercel.com)**: on each deploy, `npm run build` runs `scripts/assemble-site.mjs` and copies `frontend/`, the grid GeoJSON, `model_results.csv`, and `outputs/interpretability/**` into `public/`, with the same folder layout the app already expects. You can deploy with **your own Vercel account**; you do **not** need admin access to the org repo’s GitHub Pages settings (useful when only a maintainer can enable Pages).
 
-**One-time setup in the GitHub UI**
+**Option A — Import from Git (dashboard)**  
+1. [vercel.com](https://vercel.com) → **Add New Project** → import this GitHub repo.  
+2. Vercel should pick up `vercel.json` (build: `npm run build`, output: `public`). Framework: **Other**.  
+3. Deploy. Your site will look like `https://<project>.vercel.app/frontend/index.html` (or open `/` — the root `index.html` in `public/` redirects into the app).
 
-1. Merge or push the workflow to `main` (or `master`) so it runs at least once. It **creates/updates a `gh-pages` branch** with the static files (this does not use the “GitHub Actions” Pages API that often returns 404 for orgs or when Pages isn’t fully enabled).
-2. **Settings → Pages → Build and deployment → Source:** choose **Deploy from a branch**.
-3. **Branch:** `gh-pages`, **folder:** `/ (root)**, then **Save**.
+**Option B — Vercel CLI (no org GitHub app install)**  
+From a local clone, after `npx vercel` and logging in, deploy a production build. No special GitHub permission beyond being able to clone.  
 
-After that, the site is at  
-`https://<your-username-or-org>.github.io/<repo-name>/`  
-(the root `index.html` redirects to `frontend/index.html`).
+If the org **blocks** third-party Git apps for the team repo, use the CLI, or deploy from a **personal fork** that has the same `vercel.json` and build.
 
-The relative URLs in `frontend/js/config.js` still work, because the deployed tree keeps `frontend/`, `data/`, `baselines/`, and `outputs/` next to each other the same way as on your laptop. If you update the model CSV or the grid, commit and push so the workflow updates `gh-pages`.
-
-**If you still see 404 in the browser:** wait a minute after the workflow turns green, hard-refresh, and confirm the Pages URL uses your **repo name** and (for a project site) the path is `/repo-name/`, not the org’s main user page unless that’s what you set up.
-
-**Private repositories:** free GitHub Pages for private repos has limits on who can use it; for class projects, a **public** repo is usually the path of least resistance. If you use a private repo, check GitHub’s current docs for Pages availability on your plan.
+**Relevant files:** `vercel.json`, `package.json` (`build` → `node scripts/assemble-site.mjs`), and `scripts/assemble-site.mjs`. The `public/` directory is **generated** and is gitignored.
 
 ## Updating the GIF in this README
 
