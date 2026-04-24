@@ -83,6 +83,24 @@ Written to `data/processed/` by default:
 
 `model_table.parquet` is the main deliverable for RF/XGBoost/baseline modeling.
 
+## Frontend (static snapshot)
+
+The web UI under `frontend/` loads GeoJSON/CSV from `data/`, `baselines/outputs/`, and `outputs/interpretability/` using paths relative to `frontend/index.html`. To bundle **only what the app needs** for a folder upload or zip (e.g. Netlify, class submission):
+
+```bash
+python3 scripts/sync_frontend_data.py
+# or:  make frontend-snapshot
+```
+
+This writes `outputs/frontend-snapshot/` with the same directory shape so `../data/...` still resolves. Test locally:
+
+```bash
+cd outputs/frontend-snapshot && python3 -m http.server 8000
+# open http://localhost:8000/frontend/index.html
+```
+
+Optional zip: `python3 scripts/sync_frontend_data.py --zip` (or `make frontend-snapshot-zip`) creates `outputs/frontend-snapshot.zip`. For **Netlify** (or similar), set the **publish directory** to `outputs/frontend-snapshot` and open `/frontend/index.html`, or add a root redirect to that path. Regenerate the snapshot after you refresh `data/processed/`, `baselines/outputs/model_results.csv`, or `outputs/interpretability/`.
+
 ## Current locked data choice
 
 - Fire incidents: 2024 NFIRS PDR Light feature layer derived from the FEMA/USFA NFIRS Public Data Release, filtered to `STATE_ID='GA'`, `CITY='Atlanta'`, `INC_TYPE` in the fire range `100-199`, and `AID` in `('1','2','N')` to avoid aid-given double counts.
