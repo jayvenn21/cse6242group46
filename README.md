@@ -101,6 +101,21 @@ cd outputs/frontend-snapshot && python3 -m http.server 8000
 
 Optional zip: `python3 scripts/sync_frontend_data.py --zip` (or `make frontend-snapshot-zip`) creates `outputs/frontend-snapshot.zip`. For **Netlify** (or similar), set the **publish directory** to `outputs/frontend-snapshot` and open `/frontend/index.html`, or add a root redirect to that path. Regenerate the snapshot after you refresh `data/processed/`, `baselines/outputs/model_results.csv`, or `outputs/interpretability/`.
 
+## Screenshots and animated GIF of the app
+
+The data sync above only **copies files**; it does not render the UI. To **generate PNGs and a time-scrubber GIF** (e.g. for a report or presentation), use Playwright in a small venv:
+
+```bash
+python3 -m venv .venv
+. .venv/bin/activate
+pip install -r requirements-capture.txt
+python -m playwright install chromium
+python3 scripts/capture_frontend_media.py
+# outputs/frontend-captures/map_overview.png, app_full.png, map_timelapse.gif
+```
+
+`make frontend-captures` does the same if `.venv` exists and has those packages installed. Options: `--no-gif`, `--gif-frames 10`, `--gif-ms 500`, `--viewport 1600x1000`. The script starts a local HTTP server (same as a normal `python3 -m http.server` from the repo root) because browsers block `file://` data loads.
+
 ## Current locked data choice
 
 - Fire incidents: 2024 NFIRS PDR Light feature layer derived from the FEMA/USFA NFIRS Public Data Release, filtered to `STATE_ID='GA'`, `CITY='Atlanta'`, `INC_TYPE` in the fire range `100-199`, and `AID` in `('1','2','N')` to avoid aid-given double counts.
