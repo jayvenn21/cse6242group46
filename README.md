@@ -127,10 +127,10 @@ The app is all static files. This repo is set up for **[Vercel](https://vercel.c
 2. Vercel should pick up `vercel.json` (build: `npm run build`, output: `public`). Framework: **Other**.  
 3. Deploy. Your site will look like `https://<project>.vercel.app/frontend/index.html` (or open `/` — the root `index.html` in `public/` redirects into the app).
 
-**Option B — Vercel CLI (no org GitHub app install)**  
-From a local clone, after `npx vercel` and logging in, deploy a production build. No special GitHub permission beyond being able to clone.  
+**Option B — Vercel CLI (works if you’re not the GitHub “owner”)**  
+You only need a **local clone** and **your own** Vercel account—no repo admin for GitHub Pages. One-time: `npm run vercel:login` (opens a browser / device code). Then from the repo root: `npm run deploy` (runs `vercel --prod`). First time, the CLI may ask to link this folder to a Vercel project (create new or pick an existing one). Your teammate can later add the same project under a Vercel team, or you keep the deploy under your account and share the URL.  
 
-If the org **blocks** third-party Git apps for the team repo, use the CLI, or deploy from a **personal fork** that has the same `vercel.json` and build.
+If the org **blocks** third-party Git apps, the CLI path avoids connecting Vercel to GitHub.
 
 **Relevant files:** `vercel.json`, `package.json` (`build` → `node scripts/assemble-site.mjs`), and `scripts/assemble-site.mjs`. The `public/` directory is **generated** and is gitignored.
 
