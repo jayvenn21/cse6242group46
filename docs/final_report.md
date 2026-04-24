@@ -4,15 +4,15 @@
 
 ## 1 Introduction
 
-Fire departments decide where to staff, what to inspect, and how ready to be -- all without knowing where the next call comes from. Fire activity is not spread evenly across a city. Some neighborhoods see repeat incidents month after month; others go quiet for long stretches and then spike. Weather, day of week, and recent local history all seem to play a role, but the raw incident log does not make any of that easy to see. You get a table of past events, not a picture of where risk sits right now or why.
+Fire departments decide where to staff, what to inspect, and how ready to be -- all without knowing where the next call comes from. Fire activity is not spread evenly across a city. Some neighborhoods see repeat incidents month after month; others go quiet for long stretches and then spike. Weather, day of week, and recent local history all seem to play a role, but the raw incident log does not make any of that easy to see. What remains is a table of past events, not a picture of where risk sits right now or why.
 
-Ignition Insights is our attempt to close that gap. We take public fire incident data from Atlanta, join it with daily weather, lay a 1 km grid over the city, and build a daily modeling table where every row is one grid cell on one date. We train three models on that table -- a kernel-density hotspot baseline, per-cell ARIMA, and a Random Forest classifier -- and pipe the outputs into a Leaflet/D3 dashboard where a user can scrub through dates, compare model layers, click a cell, and read a SHAP-backed explanation of why that cell scored the way it did.
+Ignition Insights is our attempt to close that gap. We take public fire incident data from Atlanta, join it with daily weather, lay a 1 km grid over the city, and build a daily modeling table where every row is one grid cell on one date. We train three models on that table -- a kernel-density hotspot baseline, per-cell ARIMA, and a Random Forest classifier -- and feed the outputs into a Leaflet/D3 dashboard where a user can scrub through dates, compare model layers, click a cell, and read a SHAP-backed explanation of why that cell scored the way it did.
 
 We do not claim to predict individual fires. At a 0.5% positive rate in the test set, no model we tried comes close to a reliable binary alarm. What the system does well is *rank* cells by relative risk and *explain* the ranking, which is closer to what a fire department actually needs when deciding where to look.
 
 ## 2 Problem Definition
 
-The plain version: given Atlanta's recent fire history, today's weather, and what has been happening in each neighborhood lately, which 1 km patches of the city look most likely to have a fire incident tomorrow, and what is driving that estimate?
+In plain terms: given Atlanta's recent fire history, today's weather, and what has been happening in each neighborhood lately, which 1 km patches of the city look most likely to have a fire incident tomorrow, and what is driving that estimate?
 
 More precisely, we tile the study area into fixed grid cells $G = \{g_1, \ldots, g_n\}$ (in our case $n = 1{,}176$ cells, of which 364 have at least one modeled day with data) and index time as daily steps $T = \{t_1, \ldots, t_m\}$ covering the full year 2024. For each cell-day pair $(g_i, t_j)$ we build a feature vector $x_{i,j}$ with weather, calendar, and recent-history features. The target is
 
@@ -24,7 +24,7 @@ y_{i,j} =
 \end{cases}
 $$
 
-and we learn $f(x_{i,j}) \to p_{i,j}$, a risk score between 0 and 1. The visualization job is to project those scores, alongside the baselines and the ground-truth labels, back onto the map so users can compare models, browse dates, and drill into individual cells.
+and we learn $f(x_{i,j}) \to p_{i,j}$, a risk score between 0 and 1. The visualization task is then to project those scores, alongside the baselines and the ground-truth labels, back onto the map so users can compare models, browse dates, and drill into individual cells.
 
 Three things make this hard. First, the data is extremely imbalanced: out of 132,860 cell-day rows in the model table, only 1,415 are positive (~1.1%), and in the 73-day test window that drops to 138 out of 26,572 (0.5%). Second, risk has both a spatial component (some cells are historically busier) and a temporal component (recent activity, weather, weekends). Third, a score by itself is not very useful in a public-safety setting -- the user needs to know *why* it is high.
 
@@ -42,7 +42,7 @@ The main gap we see in this literature is that most systems do one or two of for
 
 ### Intuition
 
-The idea is straightforward: if you give a model recent incident counts, weather, day-of-week, and which cell you are looking at, it should be able to rank cells by relative risk better than a static hotspot map. And if you pair that ranking with a SHAP breakdown and a dashboard that lets you scrub through time, the output becomes something a person can actually reason about -- not just a CSV of probabilities.
+The idea is straightforward: if you give a model recent incident counts, weather, day-of-week, and which cell you are looking at, it should be able to rank cells by relative risk better than a static hotspot map. And if you pair that ranking with a SHAP breakdown and a dashboard that lets you scrub through time, the output becomes something interpretable rather than a raw table of probabilities.
 
 ### Data
 
@@ -64,7 +64,7 @@ The result is a 133K-row cell-day table. Rows where the forward target is undefi
 
 ### Hotspot baseline
 
-We fit a 2D Gaussian KDE over training-set cell centroids weighted by incident count and evaluate the density at every cell. The density is normalized into `hotspot_prob` and a threshold is picked to maximize F1 on the training data. This is the simplest possible spatial model: it asks whether historical density alone tells you anything about future risk. It ignores weather, time, and recent trends entirely.
+We fit a 2D Gaussian KDE over training-set cell centroids weighted by incident count and evaluate the density at every cell. The density is normalized into `hotspot_prob` and a threshold is picked to maximize F1 on the training data. This is the simplest possible spatial model: it asks whether historical density alone carries signal about future risk. It ignores weather, time, and recent trends entirely.
 
 ### ARIMA baseline
 
@@ -94,7 +94,7 @@ The model table is split temporally: the first 80% of unique dates go to trainin
 
 The test set has 26,572 cell-date rows. Of those, 138 are positive (0.52%). This extreme imbalance is the single most important fact about the evaluation: any classifier that always says "no fire" gets 99.5% accuracy.
 
-We report accuracy, precision, recall, F1, ROC-AUC, and PR-AUC. Accuracy is included because people expect it, but it is nearly meaningless here. The ranking metrics (ROC-AUC, PR-AUC) matter more because our real use case is risk ranking, not yes/no alarms.
+We report accuracy, precision, recall, F1, ROC-AUC, and PR-AUC. Accuracy is included for completeness, but it is nearly meaningless here. The ranking metrics (ROC-AUC, PR-AUC) matter more because our real use case is risk ranking, not yes/no alarms.
 
 ### Results
 
@@ -104,13 +104,13 @@ We report accuracy, precision, recall, F1, ROC-AUC, and PR-AUC. Accuracy is incl
 | ARIMA | 0.9920 | 0.0375 | 0.0217 | 0.0275 | 0.5910 | 0.0110 |
 | Random Forest | 0.9947 | 0.0000 | 0.0000 | 0.0000 | 0.6508 | 0.0144 |
 
-**Accuracy is misleading.** All three models sit above 98% because almost every row is negative. A trivial "always predict 0" classifier would get 99.5%.
+**Accuracy is misleading.** All three models exceed 98% because almost every row is negative. A trivial "always predict 0" classifier would get 99.5%.
 
-**Hotspot** has the highest recall (7.25%) among the thresholded classifiers, meaning it does flag a few cells that actually have fires tomorrow. But precision is under 3%, so most of its alarms are false. This is about what you would expect from a spatial prior -- historically busy areas carry some signal, but density alone is not enough.
+**Hotspot** has the highest recall (7.25%) among the thresholded classifiers, meaning it does flag a few cells that actually have fires tomorrow. But precision is under 3%, so most of its alarms are false. This is consistent with a spatial prior -- historically busy areas carry some signal, but density alone is not enough.
 
 **ARIMA** slightly improves the ranking metrics (ROC-AUC 0.59, PR-AUC 0.011) over the hotspot, but recall is lower at 2.17%. Most cells simply do not have enough positive days for a stable time-series fit, so ARIMA mostly falls back to the historical rate.
 
-**Random Forest** has the best ranking performance (ROC-AUC 0.65, PR-AUC 0.014) but its chosen threshold produces zero true positives on the test set -- hence the 0.0 precision/recall/F1. This looks bad at first, but it means the probability surface is doing more useful work than the binary cutoff. In the frontend, we use `rf_prob` as a continuous color scale, not as a binary alarm, and that is where the value is.
+**Random Forest** has the best ranking performance (ROC-AUC 0.65, PR-AUC 0.014) but its chosen threshold produces zero true positives on the test set -- hence the 0.0 precision/recall/F1. At first glance this appears poor, but it means the probability surface is more informative than the binary cutoff. In the frontend, we use `rf_prob` as a continuous color scale rather than a binary alarm, which better serves the risk-ranking use case.
 
 To put PR-AUC in context: a random classifier on data with 0.5% positives would score PR-AUC $\approx$ 0.005. RF's 0.0144 is roughly 3x better than random, which is modest but real given how sparse fire events are.
 
@@ -120,7 +120,7 @@ Looking at the interactive map, a few patterns stand out. Cells in midtown and s
 
 ## 6 Conclusions and Discussion
 
-We built an end-to-end pipeline and dashboard for exploring fire risk in Atlanta: data fetch, cleaning, grid construction, feature engineering, three baselines, SHAP-based explanation, and a linked Leaflet/D3 interface. The main takeaway is that at this level of imbalance (0.5% positive rate in the test set), binary classification metrics are not the right way to judge the system. What matters is whether the model ranks risk in a way that is better than the baselines and whether the interface helps users understand and interrogate that ranking. On both counts, we think the system delivers.
+We built an end-to-end pipeline and dashboard for exploring fire risk in Atlanta: data fetch, cleaning, grid construction, feature engineering, three baselines, SHAP-based explanation, and a linked Leaflet/D3 interface. The main takeaway is that at this level of imbalance (0.5% positive rate in the test set), binary classification metrics are not the right way to judge the system. What matters is whether the model ranks risk in a way that is better than the baselines and whether the interface helps users understand and interrogate that ranking. On both counts, we believe the current system meets that bar.
 
 **Limitations.** The feature set is limited to weather, calendar, and incident history. We originally discussed incorporating 911 dispatch records, census demographics, building age, and land-use data, but none of that made it into the final build. The RF threshold selection clearly needs work -- a probability-calibrated approach or a cost-sensitive threshold would be better than the current F1-maximizing strategy. ARIMA is constrained by sparsity and only covers about 50 cells. We did not run a formal user study on the dashboard.
 
