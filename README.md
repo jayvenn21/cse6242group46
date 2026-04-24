@@ -86,6 +86,15 @@ By default this lands in `data/processed/`:
 
 `model_table.parquet` is what we feed into RF, ARIMA, and the rest of the baselines.
 
+## Current data choices (locked in this repo)
+
+- **Incidents:** 2024 NFIRS PDR Light, filtered to `STATE_ID='GA'`, `CITY='Atlanta'`, fire `INC_TYPE` 100–199, and `AID` in `1`, `2`, or `N` to reduce double-counting from aid records.
+- **Weather:** Open-Meteo daily history for `33.749, -84.388` — mean temp, mean RH, daily precip, and max 10 m wind.
+
+## Scope note
+
+Right now the table is **only** NFIRS + citywide daily weather + time/history features. We are **not** folding in 911, census, or other neighborhood context unless another part of the project adds that — don’t claim those in the writeup if they aren’t in this branch.
+
 ## Run the frontend (local)
 You need `baselines/outputs/model_results.csv` (and the usual `data/processed/` + interpretability files) in place first—same as for the hosted site. From the **repo root**, start a small server so the app can load data (browsers block that from `file://`):
 ```bash
@@ -116,12 +125,3 @@ This GIF was recorded with `scripts/capture_frontend_media.py`. It’s the choro
 <p align="center">
   <img src="./docs/images/map_timelapse.gif" width="600" height="350" alt="Fire risk map: choropleth updates as the date slider moves">
 </p>
-
-## Current data choices (locked in this repo)
-
-- **Incidents:** 2024 NFIRS PDR Light, filtered to `STATE_ID='GA'`, `CITY='Atlanta'`, fire `INC_TYPE` 100–199, and `AID` in `1`, `2`, or `N` to reduce double-counting from aid records.
-- **Weather:** Open-Meteo daily history for `33.749, -84.388` — mean temp, mean RH, daily precip, and max 10 m wind.
-
-## Scope note
-
-Right now the table is **only** NFIRS + citywide daily weather + time/history features. We are **not** folding in 911, census, or other neighborhood context unless another part of the project adds that — don’t claim those in the writeup if they aren’t in this branch.
