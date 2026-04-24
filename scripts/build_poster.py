@@ -163,7 +163,7 @@ def build():
     p.font.name = "Calibri"
     p.alignment = PP_ALIGN.CENTER
     p2 = tf.add_paragraph()
-    p2.text = "Georgia Institute of Technology  \u2014  CSE 6242 Data and Visual Analytics  \u2014  Team 46"
+    p2.text = "Georgia Institute of Technology  |  CSE 6242 Data and Visual Analytics  |  Team 46"
     p2.font.size = Pt(20)
     p2.font.color.rgb = RGBColor(0xFF, 0xBB, 0xBB)
     p2.font.name = "Calibri"
@@ -182,18 +182,18 @@ def build():
     _box(slide, lx, Y0, cw, sec_h)
     by = _heading(slide, lx + pad, Y0 + pad, cw - 2*pad, "Introduction")
     _bullets(slide, lx + pad, by, cw - 2*pad, sec_h - 1.4, [
-        "Fire departments make staffing and inspection decisions\n"
-        "under uncertainty, yet fire incidents cluster unevenly\n"
-        "across neighborhoods and time periods.",
-        "Current tools show what happened \u2014 not where risk is\n"
+        "Problem: Fire departments make staffing and inspection\n"
+        "decisions under uncertainty, yet fire incidents cluster\n"
+        "unevenly across neighborhoods and time periods.",
+        "Current tools show what happened, but not where risk is\n"
         "concentrated, how it shifts over time, or why a model\n"
         "flags a particular area.",
-        "Better risk awareness helps departments pre-position\n"
-        "resources and prioritize inspections, potentially\n"
-        "reducing response times and preventing incidents.",
-        "We built an end-to-end system that forecasts next-day\n"
-        "fire risk on a 1 km Atlanta grid and explains each\n"
-        "prediction through an interactive dashboard.",
+        "Why it matters: Better risk awareness helps departments\n"
+        "pre-position resources, prioritize inspections, and\n"
+        "potentially reduce response times.",
+        "Our system forecasts next-day fire risk on a 1 km\n"
+        "Atlanta grid and explains each prediction through\n"
+        "an interactive Leaflet/D3 dashboard.",
     ], size=22)
 
     # ═══════════════════════════════════════════════════════════
@@ -205,7 +205,7 @@ def build():
     by = _heading(slide, lx + pad, y2 + pad, cw - 2*pad, "Data")
     _bullets(slide, lx + pad, by, cw - 2*pad, sec_h2 - 1.4, [
         "1,473 geocoded fire incidents from 2024 NFIRS PDR Light\n"
-        "(Atlanta, fire codes 100\u2013199, deduplicated).",
+        "(Atlanta, fire codes 100-199, deduplicated).",
         "Daily weather from Open-Meteo: temperature, humidity,\n"
         "precipitation, wind speed (citywide, one row per day).",
         "1,176 grid cells at 1 km resolution; 132,860 cell-day rows\n"
@@ -221,18 +221,20 @@ def build():
     by = _heading(slide, lx + pad, y3 + pad, cw - 2*pad, "Methods")
     _bullets(slide, lx + pad, by, cw - 2*pad, sec_h3 - 1.4, [
         "Hotspot baseline: Gaussian KDE over training centroids\n"
-        "weighted by count. Captures static spatial density only.",
+        "weighted by count. Tests if static spatial density alone\n"
+        "can identify future risk.",
         "ARIMA baseline: per-cell time-series for top 50 cells.\n"
-        "Grid search (p,d,q) by AIC; fallback for sparse cells.",
+        "Grid search (p,d,q) by AIC. Tests whether a cell's own\n"
+        "history predicts its future activity.",
         "Random Forest (main model): 300 trees, max depth 15,\n"
-        "balanced weights. Uses all 14 features + encoded grid_id.\n"
-        "Combines weather, calendar, history, and location signals\n"
-        "that simpler baselines ignore individually.",
-        "Temporal 80/20 split: train Jan\u2013Oct 18, test Oct 19\u2013Dec 30.\n"
+        "balanced weights, 14 features + encoded grid_id.\n"
+        "Intuition: combining weather, calendar, recent history,\n"
+        "and location should outperform single-signal baselines.",
+        "Temporal 80/20 split: train Jan-Oct 18, test Oct 19-Dec 30.\n"
         "No row shuffling to prevent future-data leakage.",
-        "Key novelty: most prior systems provide either forecasting\n"
-        "or explanation. Ours combines short-horizon prediction,\n"
-        "SHAP explanation, and interactive exploration in one tool.",
+        "Novelty: most prior systems offer forecasting or\n"
+        "explanation, not both. Ours integrates prediction,\n"
+        "SHAP explanation, and linked exploration in one tool.",
     ], size=22)
 
     # ═══════════════════════════════════════════════════════════
@@ -267,21 +269,24 @@ def build():
     # ═══════════════════════════════════════════════════════════
     # RIGHT COL: RESULTS
     # ═══════════════════════════════════════════════════════════
-    _box(slide, rx, Y0, cw, 4.6)
+    _box(slide, rx, Y0, cw, 5.2)
     by = _heading(slide, rx + pad, Y0 + pad, cw - 2*pad, "Results")
-    _bullets(slide, rx + pad, by, cw - 2*pad, 3.6, [
+    _bullets(slide, rx + pad, by, cw - 2*pad, 4.2, [
+        "Evaluation: temporal hold-out (last 20% of dates).\n"
+        "Metrics: Accuracy, Precision, Recall, F1, ROC-AUC, PR-AUC.",
         "Test set: 26,572 cell-days, only 138 positive (0.52%).\n"
         "Extreme imbalance makes accuracy misleading (all > 98%).",
-        "RF achieves the best ranking: ROC-AUC 0.65, PR-AUC 0.014\n"
-        "(\u22483\u00d7 better than random at this positive rate).",
-        "RF threshold gives 0 true positives, but the continuous\n"
-        "probability surface is more useful as a risk map.",
+        "Model comparison: RF outranks both baselines.\n"
+        "ROC-AUC: RF 0.65 > ARIMA 0.59 > Hotspot 0.53.\n"
+        "PR-AUC:  RF 0.014 > ARIMA 0.011 > Hotspot 0.009.",
+        "RF threshold yields 0 true positives, but the continuous\n"
+        "probability surface is more useful as a ranked risk map.",
     ], size=22)
 
     # ═══════════════════════════════════════════════════════════
     # RIGHT COL: METRICS FIGURE
     # ═══════════════════════════════════════════════════════════
-    ry2 = Y0 + 4.6 + GAP
+    ry2 = Y0 + 5.2 + GAP
     _box(slide, rx, ry2, cw, 7.0)
     _img(slide, "baselines/outputs/plots/metrics_comparison.png",
          rx + (cw - 12.0) / 2, ry2 + 0.3, width=12.0)
@@ -324,7 +329,7 @@ def build():
     _box(slide, rx, ry5, cw, sec_h_conc)
     by = _heading(slide, rx + pad, ry5 + pad, cw - 2*pad, "Conclusions")
     _bullets(slide, rx + pad, by, cw - 2*pad, sec_h_conc - 1.2, [
-        "Binary metrics are insufficient at 0.5% positive rate \u2014\n"
+        "Binary metrics are insufficient at 0.5% positive rate;\n"
         "ranked risk surfaces are more practical than alarms.",
         "Linked views (map + timeline + histogram + explanation)\n"
         "make model outputs easier to understand and critique.",
@@ -348,7 +353,7 @@ def build():
         "[6] Madaio et al., Firebird Atlanta, 2016",
         "[7] Jin et al., Deep sequence fire, ASC 2020",
         "[8] Ahn et al., Stacking ensemble, Fire 2024",
-        "[9\u201315] Zhang, Ku, Cui, Liao, Kang, Xiao, Jennings",
+        "[9-15] Zhang, Ku, Cui, Liao, Kang, Xiao, Jennings",
     ]
     _bullets(slide, rx + pad, by, cw - 2*pad, remaining - 1.0, refs, size=16)
 
