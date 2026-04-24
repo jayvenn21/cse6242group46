@@ -108,6 +108,22 @@ python3 -m http.server 8000
 
 Then open **http://localhost:8000/frontend/index.html** in a normal tab. Browsers won’t load the data off `file://`, so a tiny local server is the usual trick.
 
+### Host the same app on GitHub (Pages)
+
+You can. The map is all static files, and **GitHub Pages** can host them for free on a public repo. This repo includes a workflow (`.github/workflows/github-pages.yml`) that copies `frontend/`, the grid GeoJSON, `model_results.csv`, and `outputs/interpretability/` into a small deploy bundle and publishes it on every push to `main` or `master` (or when you run the workflow manually from the **Actions** tab).
+
+**One-time setup in the GitHub UI**
+
+1. Push the workflow to GitHub and merge to `main` (or your default branch that matches the workflow).
+2. In the repo: **Settings → Pages → Build and deployment → Source:** choose **GitHub Actions** (not “Deploy from a branch” unless you prefer that route).
+3. After the first successful run, your site will be at  
+   `https://<your-username-or-org>.github.io/<repo-name>/`  
+   (that root redirects to `frontend/index.html`).
+
+The relative URLs in `frontend/js/config.js` still work, because the deployed tree keeps `frontend/`, `data/`, `baselines/`, and `outputs/` next to each other the same way as on your laptop. If you update the model CSV or the grid, commit and push so the workflow ships a new build.
+
+**Private repositories:** free GitHub Pages for private repos has limits on who can use it; for class projects, a **public** repo is usually the path of least resistance. If you use a private repo, check GitHub’s current docs for Pages availability on your plan.
+
 ## Updating the GIF in this README
 
 If you change the model output or the UI, you can re-record the clip:
