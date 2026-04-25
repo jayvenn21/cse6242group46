@@ -93,4 +93,4 @@ repository, so you can skip to step 4 to just view the dashboard.
 
 DEMO VIDEO
 ----------
-https://github.com/jayvenn21/cse6242group46/raw/main/demo6242.mp4
+https://www.youtube.com/watch?v=AkkAuIHmbiw
