@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Team 46 — Fire risk explorer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <div id="error-banner" class="error-banner" role="alert"></div>
+    <div class="app">
+      <header>
+        <h1>Explaining &amp; forecasting local fire incidents (Atlanta grid)</h1>
+        <span class="meta">CSE 6242 · Team 46</span>
+        <div class="controls">
+          <div
+            class="time-control"
+            id="time-control-panel"
+            role="group"
+            aria-labelledby="time-label"
+          >
+            <span id="time-label" class="time-label">Time</span>
+            <div class="time-row">
+              <button type="button" id="date-prev" class="btn-step" aria-label="Previous day">
+                ←
+              </button>
+              <div class="time-readout-wrap" id="time-readout-wrap">
+                <span id="date-readout" class="date-readout" aria-live="polite"></span>
+                <input
+                  id="date-slider"
+                  type="range"
+                  min="0"
+                  max="0"
+                  value="0"
+                  step="1"
+                  aria-label="Scrub through dates in the model"
+                />
+              </div>
+              <button type="button" id="date-next" class="btn-step" aria-label="Next day">
+                →
+              </button>
+              <div class="time-playback" role="group" aria-label="Date animation">
+                <button
+                  type="button"
+                  id="date-play-toggle"
+                  class="btn-play"
+                  aria-pressed="false"
+                  title="From first date, step through to the last (~0.6s per day)"
+                >
+                  <span id="date-play-icon" class="btn-play-icon" aria-hidden="true"
+                    >▶</span
+                  >
+                  <span id="date-play-label" class="btn-play-label">Play</span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <label>
+            Color by
+            <select id="metric-select" aria-label="Metric to color the map"></select>
+          </label>
+        </div>
+      </header>
+      <main>
+        <div id="map-container" aria-label="Choropleth map">
+          <div id="leaflet-map"></div>
+          <div id="map-status" class="status-line" role="status">Loading…</div>
+          <div class="legend" id="map-legend">
+            <div class="legend-title" id="legend-title">Legend</div>
+            <div class="swatch-wrap" id="legend-swatch"></div>
+            <div class="legend-labels">
+              <span id="legend-min">low</span>
+              <span id="legend-max">high</span>
+            </div>
+          </div>
+        </div>
+        <aside aria-label="Cell detail" class="detail-aside">
+          <section class="side-block">
+            <h2 id="panel-title">Select a cell</h2>
+            <p class="hint" id="cell-hint">
+              Click a map cell. The time scrubber updates the map; your selection
+              is kept so charts follow the same grid across days.
+            </p>
+          </section>
+          <section class="side-block" aria-labelledby="dist-heading">
+            <h2 id="dist-heading">Distribution on this day</h2>
+            <p class="subhead" id="dist-caption">
+              Histogram of the current “Color by” metric across cells that have a
+              row today (read-only; hover bars).
+            </p>
+            <div id="dist-chart" class="d3-panel" aria-label="Distribution histogram"></div>
+          </section>
+          <section class="side-block" aria-labelledby="ts-heading">
+            <h2 id="ts-heading">This cell over time</h2>
+            <p class="subhead" id="ts-caption">
+              Model probabilities across all dates in the CSV for the selected
+              cell. <strong>Click</strong> the chart to jump the map to a date;
+              <strong>hover</strong> for values.
+            </p>
+            <div id="ts-chart" class="d3-panel" aria-label="Time series of model probabilities"></div>
+          </section>
+          <section
+            class="side-block"
+            id="section-snapshot"
+            hidden
+            aria-labelledby="snap-heading"
+          >
+            <h2 id="snap-heading">Snapshot (selected day)</h2>
+            <div id="table-wrap" class="data-snapshot"></div>
+          </section>
+          <section
+            class="side-block"
+            id="section-explain"
+            hidden
+            aria-label="Narrative explanation"
+          >
+            <h2>Why this cell? (explanations)</h2>
+            <div id="explanation"></div>
+          </section>
+          <section
+            class="side-block"
+            id="section-shap"
+            hidden
+            aria-label="SHAP driver strength"
+          >
+            <h2>Top SHAP drivers</h2>
+            <div id="shap-chart" class="d3-panel" aria-label="SHAP bar chart"></div>
+          </section>
+          <div
+            id="chart-tooltip"
+            class="chart-tooltip"
+            role="tooltip"
+            aria-hidden="true"
+          ></div>
+          <p class="link-note">
+            Map: <strong>Leaflet</strong>. Analytics: <strong>D3</strong> (linked
+            views). Serve from repo root.
+          </p>
+        </aside>
+      </main>
+    </div>
+    <script
+      src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>
